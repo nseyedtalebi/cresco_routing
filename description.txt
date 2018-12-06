@@ -1,0 +1,26 @@
+From the proposal email I wrote to Dr. Silvestri:
+
+  I gave my proposal some more thought.  The problem is to find the minimum cost/time way to complete a distributed computation given the following constraints:
+
+    Network topology
+    Compute capacity available at each node
+    Latency,throughput, or other requirements for application
+    Characteristics of data
+        Size/rate
+        Streaming or batch?
+
+Assume the last two points are given as part of the application specification. The specification consists of a description of the input and output, an ordered sequence of steps that describe how data is transformed, and any latency/throughput requirements. Each step in a pipeline may be assigned to exactly one compute node. Thus, given an application and a network representing a Cresco deployment, we wish to find a mapping of application steps to network nodes that minimizes total cost.
+
+Since the application specs are given, we'll consider different topologies and different distributions of available compute capacity.
+
+    Topology
+        Cresco components communicate through message passing. In a working Cresco deployment, each agent connects to a regional controller, which connects to the global controller. Thus, we can send messages with arbitrary payloads from any node to any other node.
+        Nodes may or may not be able to connect directly. Direct connections are probably faster
+        We will vary which agents can communicate directly. We could model this using a random graph G = (V,C U D).  The set of nodes V would be the same as our available compute nodes. The set C represents the edges we know to exist since they're part of the framework. The set D represents direct connections (the random part). Each edge has a throughput associated with it.
+    Compute Capacity
+        We know the available and total capacity at each node at each step of the calculations
+        We could set all initial capacities to a constant or use a probability distribution to assign capacities to randomly assign compute capacities to each node
+
+It's a shortest-path problem with additional constraints or a satisfiability problem with additional constraints. I'd like to find a way to solve the problem and test my solution on randomly-generated networks as described above. Moreover, I'd like to compare different approaches: would it be faster to solve the satisfiability problem and select the fastest of those solutions by brute force or would a modified version of the all-pairs shortest-path algorithm be better?
+
+I still had some trouble articulating my thoughts, so I expect there are parts that will need further explanation or consideration. I've copied my adviser to make sure I've characterized the problem correctly since I hope to use this work as part of a larger project.
