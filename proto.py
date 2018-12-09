@@ -7,7 +7,7 @@ for edge in g.edges:
 fast_links = [(0,5),(5,6),(6,3)]
 fast_both = fast_links+[tuple(reversed(link)) for link in fast_links]
 g.add_edges_from(fast_both,weight=1)
-m = Model('pipestage')
+m = Model('p')
 #d_index = [[i,j for i in range(len(g)) for j in range(len(g)) if i!=j]
 #d = m.addVars(,vtype=GRB.BINARY,name='d')
 d = m.addVars(list(g.edges),vtype=GRB.BINARY,name='d')
@@ -29,3 +29,11 @@ for i in range(len(g)):
         if i!=j:
             weights[i,j] = g.get_edge_data(i,j)['weight']
 obj = m.setObjective(d.prod(weights),sense=GRB.MINIMIZE)
+
+def powerset(iterable):
+    """
+    powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)
+    """
+    xs = list(iterable)
+    # note we return an iterator rather than a list
+    return chain.from_iterable(combinations(xs,n) for n in range(len(xs)+1))
