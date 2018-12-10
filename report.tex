@@ -1,0 +1,27 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+
+\author{Nima Seyedtalebi}
+\title{A Heuristic Approach for Efficient Edge Computing Pipeline Placement}
+
+\newcommand{\forallv}[1]{\ensuremath{\forall #1 \in V}}
+
+\newcommand{\foralle}[2]{\ensuremath{\forall (#1,#2) \in E }}
+
+\begin{document}
+	\maketitle
+	\begin{abstract}
+		The \textit{edge computing pipeline placement problem} (EPP) is the following: given an undirected graph $G=(V,E)$ with $V$ nodes and $E$ edges, edge weights $w_{ij} \space \foralle{i}{j}$, compute capacities $c_{j} \space \forallv{j}$, and a pipeline specification $P = (n,C_{s},I_{s},v_{out})$, where  $n$ is the number of pipline stages, $C_{s}$ the required capacities for each stage, $I_{s}$ the locations of the input data for each stage, and $v_{out}$. The goal is to find an assignment $A$ that minimizes the total weight of the tree that spans the input nodes, output node, and assigned pipe stages. In this paper, we shall propose a greedy approximation algorithm for EPP that places each stage of the pipeline separately, present two alternative implementations, and analyze the performance of these implementations on synthetic networks.
+		%$C_{r} = \{ C_{r}|r \in \mathbb{N} \wedge 0 \le r \le n\}$
+	\end{abstract}
+	
+	\section{Introduction}
+	The number of Internet protocol (IP) connected devices is growing rapidly. According to the Cisco Visual Networking Index, by 2022 the number of connected devices will be more than three times the global population. 71 percent of these devices will be wireless or mobile by that time, and as a whole they will produce 4.8 Zettabytes of data (compared to the 1.5 ZB in 2017).\cite{ciscoVNI} Compute capacity has grown to meet rising demands but network performance has not increased as quickly, leading to bottlenecks in the network. Edge computing is a computational paradigm developed in response to this problem \cite{edgeEmerge},\cite{edgePromise}. The key idea of edge computing is that we can reduce the impact of the networking bottleneck by moving computation closer (in networking terms) to the input data.
+	
+	The Cresco edge computing framework developed by Bumgardner et al.\cite{bumgardner2016cresco} was designed to address this problem. Cresco is based on principles from agent-based systems and the actor programming model. 
+	
+	\bibliographystyle{plain}
+	\bibliography{report}
+\end{document}
+
