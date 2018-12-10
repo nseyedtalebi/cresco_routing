@@ -59,7 +59,7 @@ def print_edge_attr(g,attr='weight',w=None):
         if not w or val == w:
             print(f'{e}:{val}')
 
-def bidirected_steiner_tree(V,E,T,weights,solver_logfile=''):
+def bidirected_steiner_tree(V,E,T,weights,solver_logfile=None):
     """Find a minimum-weight Steiner tree
     
     V: an iterable of integers representing nodes
@@ -79,7 +79,8 @@ def bidirected_steiner_tree(V,E,T,weights,solver_logfile=''):
             weights[e] = weights[reversed(e)]
     root = sample(T,1)[0]
     m = Model('steiner')
-    m.Params.LogFile = solver_logfile
+    if solver_logfile:
+        m.Params.LogFile = solver_logfile
     m.Params.LogToConsole = 0
     d = m.addVars(A,vtype=GRB.BINARY,name='d')
     for s in gen_cutsets(V,set(T).difference(set([root])),A,root=root):
