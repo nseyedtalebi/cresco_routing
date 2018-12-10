@@ -3,13 +3,15 @@
 \usepackage{amsfonts}
 \usepackage[margin=0.75in]{geometry}
 \usepackage{hyperref}
+\usepackage{algorithm}% http://ctan.org/pkg/algorithms
+\usepackage{algpseudocode}% http://ctan.org/pkg/algorithmicx
 
 \author{Nima Seyedtalebi}
 \title{A Heuristic Solution to the Edge Computing Pipeline Placement Problem}
 
 \newcommand{\forallv}[1]{\ensuremath{\forall #1 \in V}}
-
 \newcommand{\foralle}[2]{\ensuremath{\forall (#1,#2) \in E }}
+\newcommand{\eppInstance}{\ensuremath{n,C_{r},I_{s},O_{s},v_{out}}}
 
 \begin{document}
 	\maketitle
@@ -29,7 +31,7 @@
 	
     Users of the framework implement their applications as a collection of Cresco plugins that act as microservices. This dynamic, microservice-based approach is similar to the OSGi model\footnote{The most recent version of Cresco is built using the OSGi framework} and is motivated by trends toward inversion-of-control in large-scale software design \cite{osgi},\cite{spring},\cite{kubernetes}. Users of the framework specify how these microservices will function together to form a complete application. To this end, Cresco provides a JSON-based description language called the Cresco Application Description Language (CADL). Microservices the "bricks" that applications are built from and CADL descriptions are the "mortar" that binds the bricks together.
     
-    In most cases, the user provides "just enough" configuration to start the agents, a set of plugins, and CADL application description. Notably absent here is any mention of \textit{where} the computation is to take place. The framework must determine where to perform computations based on the application specification and changing network conditions. Cresco is implemented in Java \footnote{This fact is important because it means that Cresco can run on any device that has a standard Java Virtual Machine (JVM)}
+    In most cases, the user provides "just enough" configuration to start the agents, a set of plugins, and CADL application description. Notably absent here is any mention of \textit{where} the computation is to take place. The framework must determine where to perform computations based on the application specification and changing network conditions. Cresco is implemented in Java \footnote{This means that Cresco can run on any device that has a standard Java Virtual Machine (JVM)}
     and is intended for use in heterogeneous environments. Thus, the characteristics of each node in the framework are expected to vary widely and we must take this into account. For example, say we have an application that gathers data from mobile phones and provides a response within a time limit. If some of the processing could be done on each device, we could minimize the costs associated with moving data. Since network performance is often the limiting factor in the performance of large, distributed systems, this results in a net performance improvement. Moreover, moving computation to the network edge allows us to meet latency targets that would be infeasible for purely cloud-based solutions.
     
     That brings us to the main problem addressed by this paper, the EPP problem.  We seek a method for finding the least expensive placement of computational resources for a given application and Cresco deployment. The current version of the framework can determine whether an application specification is satisfiable but it does not search for an optimum placement with respect to data transport costs. Adding this feature will improve framework performance in the intended use cases through increased efficiency, potentially admitting solutions to problems that were intractable because of data transport costs. It will also facilitate the addition of a data management layer to the framework that will include data transport and indexing features.
@@ -42,15 +44,80 @@
     \end{itemize}
     
     \section{Mathematical Model}
-	We model a Cresco deployment as an complete undirected graph $G=(V,E)$ with $V$ nodes and $E$ edges. Each edge has a weight $w_{ij} \space \foralle{i}{j}$ that represents the cost of sending data through that link. Each node has a capacity $c_{j} \space \forallv{j}$ that represents the amount of computational resources available at that node. An instance of the EPP problem includes the graph $G$ representing a Cresco deployment and a pipeline specification $P = (n,C_{r},I_{s},O_{s},v_{out})$, where  $n$ is the number of pipeline stages, $C_{r}$ the required capacity for each stage, $I_{s}$ the locations of the input data for each stage, and $v_{out}$ is the node that receives the pipeline output. We make the following assumptions:
+	We model a Cresco deployment as an complete undirected graph $G=(V,E)$ with $V$ nodes and $E$ edges. Each edge has a weight $w_{ij} \space \foralle{i}{j}$ that represents the cost of sending data through that link. Each node has a capacity $c_{j} \space \forallv{j}$ that represents the amount of computational resources available at that node. An instance of the EPP problem includes the graph $G$ representing a Cresco deployment and a pipeline specification $P = (\eppInstance)$, where  $n$ is the number of pipeline stages, $C_{r}$ the required capacity for each stage, $I_{s}$ the locations of the input data for each stage, and $v_{out}$ is the node that receives the pipeline output. We make the following simplifying assumptions:
 	\begin{itemize}
 		\item Links are equivalent except for differences in weight
 		\item Data can be routed freely through each node without congestion or cost
 		\item Each stage in the pipeline must be assigned to a single compute node
 		\item Each compute node can have at most one stage assigned
+		\item Each pipe stage requires all of the input data for its computations, so for each stage $s$ we must move data from each of the nodes in $I_{s}$ to where computation for step $s$ is assigned
+		\item Nodes start with at most one dataset
+		\item Input datasets are immutable (no splitting or combining)
 	\end{itemize}
 	
-	We chose a complete graph to model a Cresco deployment because any agent may send messages to any other agent in a working deployment. If an agent is unreachable by one, it is unreachable by all and not part of the framework. The different edge weights model different link characteristics found in practice. Cresco deployments can be global in scale and span many networks, and we account for these differences by using different weights.\footnote{Consider the pathological case where each node is part of a network owned by a different group. In each case, we probably have a different firewall to go through} The weights could represent throughput, bandwidth, or latency depending on what is required by the application. The "slow" links represent data transmission through the existing control channels established by each agent, while the faster links represent direct network connections. The "slow links" are "slow" because they require using Cresco's text-based messaging protocol, so additional overhead is required to move data this way.
+	We chose a complete graph to model a Cresco deployment because any agent may send messages to any other agent in a working deployment. The different edge weights model different link characteristics found in practice. Cresco deployments can be global in scale and span many networks, and we account for these differences by using different weights.\footnote{Consider the pathological case where each node is in a network owned by a different group. In each case, we probably have a different firewall to go through} The weights could represent throughput, bandwidth, or latency depending on what is required by the application. The "slow" links represent data transmission through the existing control channels established by each agent while the faster links represent direct network connections. The "slow links" are "slow" because they require using Cresco's text-based messaging protocol, so additional overhead is required to move data this way.
+	
+	Modeled this way, we can solve the EPP by solving the well-studied Steiner Tree problem. An instance of the Steiner Tree problem includes a graph $G = (V,E)$, a set of edge weights $w_{ij} \space \foralle{i}{j}$, and a set of terminals $T \subset V$ to be spanned. In the reduction between EEP and Steiner Tree, each terminal corresponds to either an assigned pipeline step, a node containing input data, or the output node. By finding a minimal Steiner tree, we find the shortest path that connects all pipeline stages with their input and output and thus a minimal cost for a given placement. However, there is an unresolved issue: the Steiner Tree problem requires a set of terminals. In the EPP problem, we are given the locations of all input data and the output node but \textit{we do not know in advance where the pipe stages will be assigned}. Since we have node capacities and each stage's capacity requirements, we can enumerate all of the possible placements and find the minimum weight Steiner tree for each. However, it is known that the Steiner Tree problem is NP-Hard, so this is not a simple feat.
+	
+	For each pipe stage, we know the input data locations in advance. For each stage after the first $s_{0}$, we also know that there will be a single input from the previous stage. Thus, we can completely determine how much each of the stages contributes to the weight of the whole pipeline in isolation. Moreover, for each pipe stage $s \ge 1$, there is \textit{some} placement of the previous stage that minimizes the total weight of that stage. Therefore, we can set a theoretical lower bound for all possible placements by finding the minimum possible weight for each stage and summing over all stages. Since our graph $G$ is complete, for each stage, any placement we make is at most one hop away from the optimum. Thus, we can find a lower bound for the cost of each stage by trying any placement and adding the weight of the "fastest" (smallest weight) edge incident to the node chosen for placement.
+	
+	It is not known whether the pipeline that results from this greedy algorithm is globally optimal or not. Since $G$ is complete, we can place an upper bound on the difference between our solution and the optimal one. Each placement is separated from the optimal by a single edge, so at worst our approximation is wrong by $n * max(W)$ where $W$ is the set of all edge weights and $n$ is the number of pipe stages. Our algorithm is described below.
+	
+	\begin{algorithm}[H]
+		\caption{Pipeline placement algorithm}\label{EPP}
+		\begin{algorithmic}
+			%(n,C_{r},I_{s},O_{s},v_{out})
+			\Procedure{PlacePipeline}{$\eppInstance$}
+			\State s=0 \#step number
+			\State tc = 0 \#total cost
+			\State oc = 0 \#optimal cost
+			\State ComputeGs($G,C_{s}$)
+			\State PlaceStage($G_{s},I_{0},NULL$)
+			\State tc = tc + cost of initial stage
+			\State s=s+1
+			\State oc = oc + cost of initial stage
+			\While{There are more stages to place}
+			\State ComputeGs($G,s,C_{s}$)
+			\State PlaceStage($G_{s},I_{s},lastStage$)
+			\State lastStage = bestnode
+			\State s=s+1
+			\State tc = tc + bestweight
+			\State oc = oc + theoretical optimum for this stage
+			\EndWhile
+			\State Find Steiner tree that spans last stage and output
+			\State tc = tc + cost to reach output node
+			\State oc = oc + weight of "lightest" edge incident to the output node
+			\EndProcedure
+		\end{algorithmic}
+		\begin{algorithmic}
+			\Procedure{PlaceStage}{$G_{s},I_{s},i_{prev}$}
+			%\If{$i_{prev}$ is null}
+			\State bestnode = 0
+			\State bestweight = 0
+			\ForAll{$v \in G_s$}
+			 \State SteinerTree($G_s,I_{s} \cup \{v\}$)
+			 \State update bestnode and bestweight
+			\EndFor
+			%\Else
+			%\State SteinerTree($G_s,I_{s} \cup \{i_{prev}\}$)
+			%\EndIf
+			\Return{bestnode and bestweight}
+			\EndProcedure
+	    \end{algorithmic}
+    	\begin{algorithmic}
+    		\Procedure{ComputeGs}{$G,c_{r}$}
+    		\State $G_{s} = G$
+    		\ForAll{$v \in V$}
+    		\If{$\text{capacity of } v < c_{r}$}
+    		\State Remove $v$ from $G_{s}$
+    		\EndIf
+    		\EndFor \\
+    		\Return{$G_s$}
+    		\EndProcedure
+    	\end{algorithmic}
+	\end{algorithm}
+	
+	Th
 	
  
 	
