@@ -1,7 +1,6 @@
 \documentclass{article}
 \usepackage{amsmath}
 \usepackage{amsfonts}
-\usepackage[margin=0.75in]{geometry}
 \usepackage{hyperref}
 \usepackage{algorithm}% http://ctan.org/pkg/algorithms
 \usepackage{algpseudocode}% http://ctan.org/pkg/algorithmicx
@@ -39,11 +38,11 @@
     In this paper, we present the following contributions:
     \begin{itemize}
     	\item A mathematical description of the Edge Computing Pipeline Placement (EPP) problem
-    	\item A heuristic algorithm for finding an optimal placement
- 	    \item Computational experiments and analysis of the proposed algorithm
+    	\item An approximation algorithm for finding an efficient placement
+ 	    \item An analysis of the proposed algorithm
     \end{itemize}
     
-    \section{Mathematical Model}
+    \section{Method}
 	We model a Cresco deployment as an complete undirected graph $G=(V,E)$ with $V$ nodes and $E$ edges. Each edge has a weight $w_{ij} \space \foralle{i}{j}$ that represents the cost of sending data through that link. Each node has a capacity $c_{j} \space \forallv{j}$ that represents the amount of computational resources available at that node. An instance of the EPP problem includes the graph $G$ representing a Cresco deployment and a pipeline specification $P = (\eppInstance)$, where  $n$ is the number of pipeline stages, $C_{r}$ the required capacity for each stage, $I_{s}$ the locations of the input data for each stage, and $v_{out}$ is the node that receives the pipeline output. We make the following simplifying assumptions:
 	\begin{itemize}
 		\item Links are equivalent except for differences in weight
@@ -57,11 +56,11 @@
 	
 	We chose a complete graph to model a Cresco deployment because any agent may send messages to any other agent in a working deployment. The different edge weights model different link characteristics found in practice. Cresco deployments can be global in scale and span many networks, and we account for these differences by using different weights.\footnote{Consider the pathological case where each node is in a network owned by a different group. In each case, we probably have a different firewall to go through} The weights could represent throughput, bandwidth, or latency depending on what is required by the application. The "slow" links represent data transmission through the existing control channels established by each agent while the faster links represent direct network connections. The "slow links" are "slow" because they require using Cresco's text-based messaging protocol, so additional overhead is required to move data this way.
 	
-	Modeled this way, we can solve the EPP by solving the well-studied Steiner Tree problem. An instance of the Steiner Tree problem includes a graph $G = (V,E)$, a set of edge weights $w_{ij} \space \foralle{i}{j}$, and a set of terminals $T \subset V$ to be spanned. In the reduction between EEP and Steiner Tree, each terminal corresponds to either an assigned pipeline step, a node containing input data, or the output node. By finding a minimal Steiner tree, we find the shortest path that connects all pipeline stages with their input and output and thus a minimal cost for a given placement. However, there is an unresolved issue: the Steiner Tree problem requires a set of terminals. In the EPP problem, we are given the locations of all input data and the output node but \textit{we do not know in advance where the pipe stages will be assigned}. Since we have node capacities and each stage's capacity requirements, we can enumerate all of the possible placements and find the minimum weight Steiner tree for each. However, it is known that the Steiner Tree problem is NP-Hard, so this is not a simple feat.
+	Modeled this way, we can solve the EPP by solving the well-studied Steiner Tree problem. An instance of the Steiner Tree problem includes a graph $G = (V,E)$, a set of edge weights $w_{ij} \space \foralle{i}{j}$, and a set of terminals $T \subset V$ to be spanned. In the reduction between EEP and Steiner Tree, each terminal corresponds to either an assigned pipeline step, a node containing input data, or the output node. By finding a minimal Steiner tree, we find the shortest path that connects all pipeline stages with their input and output and thus a minimal cost for a given placement. However, there is an unresolved issue: the Steiner Tree problem requires a set of terminals. In the EPP problem, we are given the locations of all input data and the output node but \textit{we do not know in advance where the pipe stages will be assigned}. Since we have node capacities and each stage's capacity requirements, we can enumerate all of the possible placements and find the minimum weight Steiner tree for each. 
 	
-	For each pipe stage, we know the input data locations in advance. For each stage after the first $s_{0}$, we also know that there will be a single input from the previous stage. Thus, we can completely determine how much each of the stages contributes to the weight of the whole pipeline in isolation. Moreover, for each pipe stage $s \ge 1$, there is \textit{some} placement of the previous stage that minimizes the total weight of that stage. Therefore, we can set a theoretical lower bound for all possible placements by finding the minimum possible weight for each stage and summing over all stages. Since our graph $G$ is complete, for each stage, any placement we make is at most one hop away from the optimum. Thus, we can find a lower bound for the cost of each stage by trying any placement and adding the weight of the "fastest" (smallest weight) edge incident to the node chosen for placement.
+	We know the input data locations in advance. For each stage after the first $s_{0}$, we also know that there will be a single input from the previous stage. Thus, we can completely determine how much each of the stages contributes to the weight of the whole pipeline in isolation. Moreover, for each pipe stage $s \ge 1$, there is \textit{some} placement of the previous stage that minimizes the total weight of that stage. Therefore, we can set a theoretical lower bound for all possible placements by finding the minimum possible weight for each stage and summing over all stages. Since our graph $G$ is complete, for each stage, any placement we make is at most one hop away from the optimum. Thus, we can find a lower bound for the cost of each stage by trying any placement and adding the weight of the "fastest" (smallest weight) edge incident to the node chosen for placement.
 	
-	It is not known whether the pipeline that results from this greedy algorithm is globally optimal or not. Since $G$ is complete, we can place an upper bound on the difference between our solution and the optimal one. Each placement is separated from the optimal by a single edge, so at worst our approximation is wrong by $n * max(W)$ where $W$ is the set of all edge weights and $n$ is the number of pipe stages. Our algorithm is described below.
+	It is not clear whether the pipeline that results from this greedy algorithm is globally optimal or not. Since $G$ is complete, we can place an upper bound on the difference between our solution and the optimal one. Each placement is separated from the optimal by a single edge, so at worst our approximation is wrong by $n * max(W)$ where $W$ is the set of all edge weights and $n$ is the number of pipe stages. Our algorithm is described below.
 	
 	\begin{algorithm}[H]
 		\caption{Pipeline placement algorithm}\label{EPP}
@@ -117,14 +116,39 @@
     	\end{algorithmic}
 	\end{algorithm}
 	
-	Th
-	
+	We expect this algorithm to run slowly in practice. The complexity depends on the method used to compute the minimum weight Steiner tree. In the worst case, this algorithm calls SteinerTree() $s(n-p)+1$ times: once to link the pipeline to the output node and $n-p$ times for each stage, where $p$ represents the number of stages already placed. Still, this is much faster than solving for the whole pipeline at once by brute force. To do that, we would have to call SteinerTree ${|V| \choose s} s!$ times because we must try every permutation of $|V| \choose s$ different sequences. As we mentioned before, the gap between the approximate solution and the true optimum grows as the number of stages increases. Each additional stage adds the weight of the slowest link to the total possible error. 
  
-	
-	
-	
-	
-	
+ 	\section{Discussion}
+ 	We initially set out to create an ILP formulation for the EPP problem because it is a variant of an existing well-known problem that differs enough to make ILP relatively attractive. So far we have been unsuccessful in our efforts.  We examined a selection of papers (\cite{Aneja1980AnIL}, \cite{Goemans1993ACO},\cite{Koch1998SolvingST}, \cite{Ljubic2005SolvingTP}, \cite{brandstater15}, and \cite{haouari2010strength}) from the vast literature regarding ILP formulations of the Steiner Tree problem but could not find any formulations that do not require knowing the terminal nodes in advance. Given the sheer volume of publications regarding the Steiner Tree problem and ILP formulations thereof, we suspect such a formulation has already been described.
+ 	
+ 	Broadly speaking, there are two groups of formulations for the standard Steiner tree problem: undirected and directed. The directed and undirected versions differ by a simple transformation, but the directed version may admit better solutions and is never worse than the undirected version \cite{rao1988steiner}. Most of the research we encountered focuses on the directed formulation, though \cite{Goemans1993ACO} did present an undirected formulation that achieved an approximation as good as the best directed formulations at the time. We chose to pursue a directed approach.
+ 	To transform an undirected instance of the Steiner Tree problem to a directed instance, we replace each undirected edge $(i,j) \in E$ with two anti-parallel directed edges. The two new directed edges each have the same weight as the undirected one they replace. Finally, we choose some terminal $r \in T$ to be the \textit{root} of the Steiner arborescence\footnote{The term "arboresence" is more specific than "tree" for directed graphs. All edges in an arboresence point away from the root - see \url{https://en.wikipedia.org/wiki/Tree_(graph_theory)}}. 
+ 	
+ 	Many formulations are based on the idea that there must be at least one edge that crosses every cut that separates the root from a terminal. This poses a problem because the number of subsets is order $2^n$, so the number of constraints we add to the ILP model is also exponential. Other formulations not based on cuts do not have this problem. In pursuing an ILP formulation for the EPP problem, we implemented a naive\footnote{Emphasis on \textit{naive}: \cite{Aneja1980AnIL} presented a solution to the problem of exponential constraints over thirty years ago.}  version of the cutset formulation presented in \cite{Koch1998SolvingST}. Unfortunately, this implementation was too slow to be useful for all but the smallest of input graphs. In preliminary testing on a modern laptop computer with 16 GB RAM, a 1.3 GHz 8-core CPU, and the Gurobi solver, we were unable to solve instances with more than 16 nodes without running out of memory. For comparison, we tried using the Steiner Tree algorithm provided by NetworkX, a popular Python library for network analysis\cite{networkx}. On similarly-sized problems and the same hardware, the NetworkX Steiner implementation ran almost instantly. The NetworkX documentation does not specify which approximation algorithm it uses, but it does mention an approximation error similar to spanning-tree-based approximations.
+ 	
+ 	\section{Future Work}
+ 	We have yet to perform thorough computational experiments with this algorithm. We used the following procedure to generate random graphs for testing our implementation of the stage-placement part of our algorithm:
+ 	\begin{enumerate}
+ 		\item Create a complete undirected graph of size $n$
+ 		\item Set all edge weights to a single value $slow_edge_weight$
+ 		\item Choose a random subset of edges size $f$
+ 		\item Set these randomly-selected edges to $fast_edge_weight$
+ 	\end{enumerate}
+ 	
+ 	We would like to try a more realistic synthetic network for testing. Instead of randomly choosing edges, we would choose random subsets of the graph and make all of the edges "fast" within the subset. Then, we would select random edges between the subsets and make those fast as well. This would more realistically approximate cases where we have groups of devices that are located in the same local area network (LAN).
+ 	
+ 	 It may be interesting to compare the performance between our proposed algorithm and one that chooses random placements. We suspect the difference between the two depends on the relative density of fast edges in the network. To test this, one could vary the relative proportion of fast edges and record the difference in minimum weights.
+ 	 
+ 	 Our model makes many simplifying assumptions, so it would be interesting to collect data from a real Cresco deployment to test how well those assumptions hold. We would like to investigate how widely the link speed varies in practice and particularly how slow are the slowest links actually are.
+ 	 
+ 	 We did not consider the \textit{size} of the data to be moved. We chose to do this because the faster links will always be cheaper if we do not consider latency, congestion, other complications present in real networks, or mutable datasets. However, this simplification is no longer justified if we model more complex situations.
+ 	 
+ 	 It would be interesting to prove whether or not our greedy approach is globally optimal. We suspect it is not because our algorithm could make choices that are locally suboptimal but globally optimal. This differs from problems with optimal greedy solutions which do not admit that possibility.
+ 	  
+ 	 \section{Conclusion}
+ 	 In this paper,we described and presented a mathematical model of the Edge Computing Pipeline Placement problem. We introduced a greedy approximation algorithm that solves the problem faster than brute-force methods and placed theoretical bounds on performance and error.
+
+	All of our source code is available freely at:\url{https://github.com/nseyedtalebi/cresco_routing} This code includes two implementations of the function that places single pipe stages, one ILP-based and another that uses NetworkX's Steiner tree approximation function.	
 	
 	\bibliographystyle{plain}
 	\bibliography{report}
