@@ -73,17 +73,18 @@
 			\State tc = 0 \#total cost
 			\State oc = 0 \#optimal cost
 			\State ComputeGs($G,C[s]$)
-			\State PlaceStage($G_{s},I[0],NULL$)
-			\State tc = tc + cost of initial stage
+			\State lastStage,bestweight = PlaceStage($G_{s},I[0],NULL$)
+			\State tc = tc + bestweight
 			\State s=s+1
-			\State oc = oc + cost of initial stage
+			\State oc = oc + bestweight
 			\While{There are more stages to place}
 			\State ComputeGs($G,C[s]$)
-			\State PlaceStage($G_{s},I[s],lastStage$)
-			\State lastStage = bestnode
+			\State lastStage,bestweight = PlaceStage($G_{s},I[s],lastStage$)
+			\#Calculate optimum by considering only a single stage
+			\State lastStage,theoreticalOptimum = PlaceStage($G_{s},I[s],NULL$)
 			\State s=s+1
 			\State tc = tc + bestweight
-			\State oc = oc + theoretical optimum for this stage
+			\State oc = oc + theoreticalOptimum
 			\EndWhile
 			\State Find Steiner tree that spans last stage and output
 			\State tc = tc + cost to reach output node
@@ -98,11 +99,11 @@
 			\ForAll{$v \in G_s$}
 			 \State SteinerTree($G_s,I[s] \cup \{v\}$)
 			 \State update bestnode and bestweight
-			\EndFor
+			\EndFor \\
 			%\Else
 			%\State SteinerTree($G_s,I[s] \cup \{i_{prev}\}$)
 			%\EndIf
-			\Return{bestnode and bestweight}
+			\Return{bestnode,bestweight}
 			\EndProcedure
 	    \end{algorithmic}
     	\begin{algorithmic}
