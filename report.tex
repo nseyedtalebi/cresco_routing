@@ -79,7 +79,7 @@
 			\State oc = oc + bestweight
 			\While{There are more stages to place}
 			\State ComputeGs($G,C[s]$)
-			\State lastStage,bestweight = PlaceStage($G_{s},I[s],lastStage$)
+			\State lastStage,bestweight = PlaceStage($G_{s},I[s],lastStage$)\\
 			\#Calculate optimum by considering only a single stage
 			\State lastStage,theoreticalOptimum = PlaceStage($G_{s},I[s],NULL$)
 			\State s=s+1
@@ -91,6 +91,9 @@
 			\State oc = oc + weight of "lightest" edge incident to the output node
 			\EndProcedure
 		\end{algorithmic}
+	\end{algorithm}
+	\begin{algorithm}[H]
+		\caption{Place a single stage of the pipeline}
 		\begin{algorithmic}
 			\Procedure{PlaceStage}{$G_{s},I[s],i_{prev}$}
 			%\If{$i_{prev}$ is null}
