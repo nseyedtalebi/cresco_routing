@@ -1,20 +1,15 @@
 import networkx as nx
 import numpy as np
-import steiner_ilp
+
 from networkx.algorithms.approximation.steinertree import steiner_tree
 from networkx.classes.graphviews import subgraph_view
 from random import sample,randint
 from collections import namedtuple
+from itertools import chain
 
-PlacementRecord = namedtuple('PlacementRecord',('node','weight','tree'))
-def find_optimal_stage(V,E,T,weights,capacities,required):
-    models = {}
-    for v in V:
-        if capacities[v] >= required:
-            sv,se,models[v] = steiner_ilp.bidirected_steiner_tree(set(V),set(E),set(T).union(set((v,))),weights=weights)
-    return models[min(models,key=lambda m:float(models[m].getAttr('objval')))],models
+PlacementRecord = namedtuple('PlacementRecord',('node','weight','tree',))
 
-def place_stage(model,terminals,required_capacity):
+def get_placements(model,terminals,required_capacity):
     placements = []
     for v in model.nodes:
         if model.nodes[v]['capacity'] >= required_capacity:
@@ -22,7 +17,7 @@ def place_stage(model,terminals,required_capacity):
             cur_weight = total_weight(tree)
             placements.append(PlacementRecord(v,cur_weight,tree))
     ranked = sorted(placements,key=lambda p:p.weight)
-    return ranked[0]
+    return ranked
 
 def total_weight(graph):
     return sum((graph.edges[edge]['weight'] for edge in graph.edges))
@@ -55,9 +50,9 @@ def test_placements(print_placements=True):
     diagonal = {**base,'fast_edges':((0,4),(4,8))}
     shared = {**base,'fast_edges':((4,5),)}
     v_shaped = {**base,'fast_edges':((0,4),(2,4))}
-    diag_p = place_stage(get_model(**diagonal)[0],terminals=(0,8),required_capacity=10)
-    shared_p = place_stage(get_model(**shared)[0],terminals=(4,5),required_capacity=10)
-    v_shaped_p = place_stage(get_model(**v_shaped)[0],terminals=(0,2),required_capacity=10)
+    diag_p = get_placements(get_model(**diagonal)[0],terminals=(0,8),required_capacity=10)[0]
+    shared_p = get_placements(get_model(**shared)[0],terminals=(4,5),required_capacity=10)[0]
+    v_shaped_p = get_placements(get_model(**v_shaped)[0],terminals=(0,2),required_capacity=10)[0]
     if print_placements:
         for placement in (diag_p,shared_p,v_shaped_p,):
             print(f'{placement.node} {placement.weight} {placement.tree.edges}')
@@ -65,35 +60,60 @@ def test_placements(print_placements=True):
     assert shared_p.node == 4 and shared_p.weight == 1
     assert v_shaped_p.node == 4 and v_shaped_p.weight == 2
 
-#best_model,models = find_optimal_stage(g.nodes,g.edges,set((2,6)),weights,capacities,required_capacity)
-#graph_size = 32 ran out of memory
+def get_capacities_by_num_fast_edges(g,fast_edges):
+    #To test try this:
+    '''for info in sorted(capacities,key= lambda v:capacities[v]['fast_edge_count'],reverse=True):
+    print(capacities[info])'''
+    LOW = 1
+    MED = 5
+    HI = 10
+    capacities = {node:{'fast_edge_count':0,'capacity':0} for node in g.nodes}
+    for node in chain(*fast_edges):
+        capacities[node]['fast_edge_count'] += 1
+    ranked_edgecounts = list(sorted(fast_edge_counts,key=lambda v:fast_edge_counts[v],reverse=True))
+    groupsize,extras = divmod(len(ranked_edgecounts),3)
+    for node in ranked_edgecounts[0:groupsize]:
+        capacities[node]['capacity'] = HI
+    for node in ranked_edgecounts[groupsize:groupsize*2]:
+        capacities[node]['capacity'] = MED
+    for node in ranked_edgecounts[groupsize*2:]:
+        capacities[node]['capacity'] = LOW
+    return capacities
 
-#graph_size=32
-#model_params = {'g':nx.complete_graph(n=graph_size),'slow_edge':100,'fast_edge':1,'ccap_low':1,'ccap_hi':10}
-#model_params['fast_edges'] = sample(tuple(model_params['g'].edges),100)
-#model,weights,capacities = get_model(**model_params)
-#required_capacity = 3
-#placement = place_stage(model,set((2,6)),required_capacity)
+PipeStage = namedtuple('PipeStage',('input_nodes','reqd_capacity'))
+'''
+The get_capacities_by_num_fast_edges function I wrote is probably not helpful.
+Adapt it to set capacities randomly: high (few), med (some), low (lots)
 
-#after placing node, set capacity to zero to prevent it from being used in next iteration
+greedy approach:starting from last stage, find optimal placement for each stage using previous stage's
+placement as input
 
-#
-"""TODO
--Finish implementing something that solves the pipeline placement problem
--Implement something to find theoretical optimum for each stage
---for each stage, we can reduce number of inputs to check for optimum because we
-can exclude based on capacity and whether or not that stages has been assigned
+other approach: find optimum for each stage individually, then find steiner tree linking placements
+and output
 
-Experiments:
--compare theoretical optimum to heuristic, then heuristic to NetworkX steiner
-    -objective performance and speed on realistic hierarcy
-    -obj performance and speed on random graph
-        -vary number of levels of link speeds
-        -vary graph size
-        -vary prob distribution for fast edges
-        -vary prob dist for compute capacity
-        
-"""
-    
+things to check, all averaged over many different runs and for both approaches, MST:
+-run time for graphs of different sizes for both methods and MST (do this first)
+ do the following with largest feasible graph
+ **for results, try both approaches, MST, and random placement**
+-results for both approaches and MST with different densities of fast edges (lots,few, etc)
+-results for both approaches and MST with randomized edge weights
 
+So what I need to do is:
+-Write something that accepts a spec and returns a list of placements
+-Modify stage placement function to accept function that will operate over terminals
+so I can try both steiner tree and minimum spanning tree
+-Modify get_model to handle randomized edge weights too
+-write something to randomly decide which edges are fast edges based on a desired density of fast edges
+-write anything that might help load and run simulations
+-wrangle resulting data to finish results section
 
+'''
+'''graph_size=32
+model_params = {'g':nx.complete_graph(n=graph_size),'slow_edge':100,'fast_edge':1}
+model_params['fast_edges'] = sample(tuple(model_params['g'].edges),100)
+
+model,weights,capacities = get_model(**model_params)
+required_capacity = 3
+placements = get_placements(model,set((2,6)),required_capacity)
+'''
+#after placing node, reduce capacity by required amount
