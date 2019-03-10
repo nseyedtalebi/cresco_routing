@@ -104,8 +104,12 @@ things to check, all averaged over many different runs and for both approaches, 
 
 So what I need to do is:
 -Write something that accepts a spec and returns a list of placements
+!!mostly done
+
 -Modify stage placement function to accept function that will operate over terminals
 so I can try steiner tree and minimum spanning tree
+!!this may not be worth it, mst and steiner take different args I think
+
 -Modify get_model to handle randomized edge weights too
 -write something to randomly decide which edges are fast edges based on a desired density of fast edges
 -write anything that might help load and run simulations
