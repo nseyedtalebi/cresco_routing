@@ -53,13 +53,16 @@ def place_stages_individually(spec,model):
 def place_stages_iteratively(spec,model):
     placements = []
     #start from last stage
-    r_spec = list[reversed(spec)]
+    r_spec = list(reversed(spec))
     for idx,stage in enumerate(r_spec):
         best_placement = get_placements(model,stage['input_nodes'],stage['reqd_capacity'])[0]
         placements.append(best_placement)
         #Make sure this node isn't reused
         model.nodes[best_placement.node]['capacity'] = 0
-        r_spec[idx+1]['input_nodes'].append(best_placement.node)
+        try:
+            (r_spec[idx+1]['input_nodes']).append(best_placement.node)
+        except IndexError as ex:
+            pass#we've reached the last element
     return list(reversed(placements)),list(reversed(r_spec))
 
 def get_random_pipe_spec(nodes,depth,num_inputs,req_capacities,add_output_node=True):

@@ -40,6 +40,6 @@ def test_full_placement():
     {'input_nodes':[6,7,11,15],'reqd_capacity':1}#second stage
     ]
     #return placer.total_weight(model_params['g'])
-    return placer.place_stages_individually(pipe_spec,model)
+    return placer.place_stages_iteratively(pipe_spec,model)
 
 placements,pipe_spec = test_full_placement()
