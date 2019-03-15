@@ -18,7 +18,7 @@ import placer
     assert diag_p.node == 4 and diag_p.weight == 2
     assert shared_p.node == 4 and shared_p.weight == 1
     assert v_shaped_p.node == 4 and v_shaped_p.weight == 2'''
-def test_full_placement():
+def get_model_and_test_spec():
     #inputs for stage 1: 0,1,4
     #stage 1 to be placed at 5
     #inputs for stage 2: 6,7,11,15
@@ -40,6 +40,13 @@ def test_full_placement():
     {'input_nodes':[6,7,11,15],'reqd_capacity':1}#second stage
     ]
     #return placer.total_weight(model_params['g'])
-    return placer.place_stages_iteratively(pipe_spec,model)
+    return model,pipe_spec
 
-placements,pipe_spec = test_full_placement()
+model,spec = get_model_and_test_spec()
+
+placements = placer.place_stages_iteratively(spec,model)
+print(placements)
+
+placements,tree = placer.place_stages_individually(spec,model)
+print(placements)
+print(tree)
