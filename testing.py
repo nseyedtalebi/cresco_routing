@@ -42,11 +42,18 @@ def get_model_and_test_spec():
     #return placer.total_weight(model_params['g'])
     return model,pipe_spec
 
+def compare_placements(one,other):
+    one_nodes = [p.node for p in one]
+    other_nodes = [p.node for p in other]
+    return one_nodes == other_nodes
+
 model,spec = get_model_and_test_spec()
+it_placements = placer.place_stages_iteratively(spec,model,'mst')
+print(it_placements)
 
-placements = placer.place_stages_iteratively(spec,model)
-print(placements)
-
-placements,tree = placer.place_stages_individually(spec,model)
-print(placements)
+model,spec = get_model_and_test_spec()
+ind_placements,tree = placer.place_stages_individually(spec,model,'mst')
+print(ind_placements)
 print(tree)
+
+print(compare_placements(it_placements,ind_placements))

@@ -1,18 +1,26 @@
 import networkx as nx
 import numpy as np
 from networkx.algorithms.approximation.steinertree import steiner_tree
+from networkx.algorithms.tree.mst import minimum_spanning_tree
 from networkx.classes.graphviews import subgraph_view
-from random import sample,randint
+from random import sample,randint,seed,uniform
 from collections import namedtuple,Sequence
 from itertools import chain
+from math import floor
 
 PlacementRecord = namedtuple('PlacementRecord',('node','weight','tree',))
-
-def get_placements(model,terminals,required_capacity):
+#initialize rng for reproducibility
+def get_placements(model,terminals,required_capacity,algorithm='steiner'):
     placements = []
+    if algorithm not in ('steiner','mst'):
+        raise ValueError("algorithm must be one of these: 'steiner','mst'")
     for v in model.nodes:
         if model.nodes[v]['capacity'] >= required_capacity:
-            tree = steiner_tree(model,list(set(terminals).union([v])))
+            terminals_U_v = list(set(terminals).union([v]))
+            if algorithm == 'steiner':
+                tree = steiner_tree(model,terminals_U_v)
+            if algorithm == 'mst':
+                tree = minimum_spanning_tree(model.subgraph(terminals_U_v))
             cur_weight = total_weight(tree)
             placements.append(PlacementRecord(v,cur_weight,tree))
     ranked = sorted(placements,key=lambda p:p.weight)
@@ -40,25 +48,40 @@ def get_model(g,slow_edge,fast_edge,fast_edges,capacities):
     capacities = g.nodes.data()
     return g,weights,capacities
 
-def place_stages_individually(spec,model):
+def get_model_random_edge_weights(g,lo,hi,capacities):
+    for edge in g.edges:
+        g.add_edge(*edge,weight=uniform(lo,hi))
+    for node in g.nodes:
+        g.nodes[node]['capacity']=capacities[node]
+    weights = {}
+    for i in range(len(g)):
+        for j in range(len(g)):
+            if i!=j:
+                weights[i,j] = g.get_edge_data(i,j)['weight']
+    #uniform distr capacities
+    capacities = g.nodes.data()
+    return g,weights,capacities
+
+def place_stages_individually(spec,model,algorithm):
     placements = []
     #start from last stage
     for stage in reversed(spec):
-        best_placement = get_placements(model,stage['input_nodes'],stage['reqd_capacity'])[0]
+        best_placement = get_placements(model,stage['input_nodes'],stage['reqd_capacity'],algorithm)[0]
         placements.append(best_placement)
         #Make sure this node isn't reused
+        #In future versions, could reduce capacity by cost and allow multiple placements
+        #on a single node
         model.nodes[best_placement.node]['capacity'] = 0
-        print(model.nodes)
     pipe_nodes = [placement.node for placement in placements]
     tree = steiner_tree(model,pipe_nodes)
     return list(reversed(placements)),PlacementRecord(None,total_weight(tree),tree)
 
-def place_stages_iteratively(spec,model):
+def place_stages_iteratively(spec,model,algorithm):
     placements = []
     #start from last stage
     r_spec = list(reversed(spec))
     for idx,stage in enumerate(r_spec):
-        best_placement = get_placements(model,stage['input_nodes'],stage['reqd_capacity'])[0]
+        best_placement = get_placements(model,stage['input_nodes'],stage['reqd_capacity'],algorithm)[0]
         placements.append(best_placement)
         #Make sure this node isn't reused
         model.nodes[best_placement.node]['capacity'] = 0
@@ -83,6 +106,12 @@ def get_random_pipe_spec(nodes,depth,num_inputs,req_capacities,add_output_node=T
         spec.append({'input_nodes':sample(nodes,num_inputs[i]),
             'reqd_capacity':req_capacities[i]})
     return spec
+
+def get_random_fast_edges(edges,pct_fast):
+    if pct_fast < 0 or pct_fast > 1:
+        raise ValueError('pct_fast should be a percentage between 0 and 1')
+    num_fast = floor(len(edges)*pct_fast)
+    return sample(edges,num_fast)
 
 '''
 arb =  {'input_nodes':sample(nodes,num_inputs[i]),
@@ -115,7 +144,6 @@ so I can try steiner tree and minimum spanning tree
 !!this may not be worth it, mst and steiner take different args I think
 
 -Modify get_model to handle randomized edge weights too
--write something to randomly decide which edges are fast edges based on a desired density of fast edges
 -write anything that might help load and run simulations
 -wrangle resulting data to finish results section
 -write something to do random placements without breaking capacity requirements
