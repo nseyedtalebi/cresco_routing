@@ -47,20 +47,23 @@ def compare_placements(one,other):
     other_nodes = [p.node for p in other]
     return one_nodes == other_nodes
 
+uniform_model_params = placer.get_default_model_params(8,1)
+model,weights,capacities = placer.get_model(**uniform_model_params)
+
 model,spec = get_model_and_test_spec()
-it_placements,tree = placer.place_stages_iteratively(spec,model,'mst')
+it_placements,it_tree = placer.place_stages_iteratively(spec,model,'mst')
 print(it_placements)
-print(tree.nodes)
-print(placer.total_weight(tree))
+print(sorted(it_tree.edges))
+print(placer.total_weight(it_tree))
 
 model,spec = get_model_and_test_spec()
-ind_placements,tree = placer.place_stages_individually(spec,model,'mst')
+ind_placements,ind_tree = placer.place_stages_individually(spec,model,'mst')
 print(ind_placements)
-print(tree.nodes)
-print(placer.total_weight(tree))
+print(sorted(ind_tree.edges))
+print(placer.total_weight(ind_tree))
 
 model,spec = get_model_and_test_spec()
-rnd_placements,tree = placer.place_stages_randomly(spec,model)
+rnd_placements,rnd_tree = placer.place_stages_randomly(spec,model)
 print(rnd_placements)
-print(tree.nodes)
-print(placer.total_weight(tree))
+print(sorted(rnd_tree.edges))
+print(placer.total_weight(rnd_tree))
