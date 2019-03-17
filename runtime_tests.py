@@ -1,7 +1,7 @@
 import placer
 import timeit
 import functools
-
+from statistics import mean
 def prepare_functions(spec,model):
     return {'random':functools.partial(placer.place_stages_randomly,spec,model),
     'individual':functools.partial(placer.place_stages_individually,spec,model,
@@ -14,30 +14,26 @@ def prepare_functions(spec,model):
         model,'mst')
     }
 
-graph_sizes = [8,16,32]
+graph_sizes = range(3,33)#40
+#[8,16,32,64,128]
+results = {}
 for size in graph_sizes:
     uniform_model_params = placer.get_default_model_params(size,1)
     model,weights,capacities = placer.get_model(**uniform_model_params)
     spec = [{'input_nodes':[0,1,2],'reqd_capacity':1}]
     to_run = prepare_functions(spec,model)
-    trees = {name:func()[1] for name,func in to_run.items()}
-    weights = {key:placer.total_weight(val) for key,val in trees.items()}
-    print(weights)
-    '''rnd_p,rnd_tree = placer.place_stages_randomly(spec,model)
-    ind_p,ind_tree = placer.place_stages_individually(spec,model,'steiner')
-    ind_mst_p,ind_mst_tree = placer.place_stages_individually(spec,model,'mst')
-    it_p,it_tree = placer.place_stages_iteratively(spec,model,'steiner')
-    it_mst_p,it_mst_tree = placer.place_stages_iteratively(spec,model,'mst')
-    trees = {'random':rnd_tree,
-    'individual':ind_tree,
-    'iterative':it_tree,
-    'individual_mst':ind_mst_tree,
-    'iterative_mst':it_mst_tree}
-    weights = {key:placer.total_weight(val) for key,val in trees.items()}
-    print(weights)'''
-
+    times = {name:mean(timeit.repeat(func,number=1,repeat=5)) for name,func in to_run.items()}
+    print(times)
+    results[size] = times
+print(results)
 
 '''
+TODO:
+-Add something to this file to pickle the results
+-Write something to process results and produce graphs
+-If graphs look ok with smaller runs, do a full-sized run
+-write similar code for pipe depth instead of graph size (reuse as much as possible)
+
 things to check, all averaged over many different runs and for both approaches, MST:
 -run time for graphs of different sizes for both methods and MST (do this first)
  do the following with largest feasible graph
