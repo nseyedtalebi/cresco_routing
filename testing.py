@@ -32,7 +32,7 @@ def get_model_and_test_spec():
     (10,6),(10,7),(10,11),#three edges for inputs
     (10,15)#to the output node
     ]
-    model_params['capacities'] = {node:0 for node in model_params['g'].nodes}
+    model_params['capacities'] = {node:1 for node in model_params['g'].nodes}
     model_params['capacities'][5] = 1
     model_params['capacities'][10] = 1
     model,weights,capacities = placer.get_model(**model_params)
@@ -48,12 +48,19 @@ def compare_placements(one,other):
     return one_nodes == other_nodes
 
 model,spec = get_model_and_test_spec()
-it_placements = placer.place_stages_iteratively(spec,model,'mst')
+it_placements,tree = placer.place_stages_iteratively(spec,model,'mst')
 print(it_placements)
+print(tree.nodes)
+print(placer.total_weight(tree))
 
 model,spec = get_model_and_test_spec()
 ind_placements,tree = placer.place_stages_individually(spec,model,'mst')
 print(ind_placements)
-print(tree)
+print(tree.nodes)
+print(placer.total_weight(tree))
 
-print(compare_placements(it_placements,ind_placements))
+model,spec = get_model_and_test_spec()
+rnd_placements,tree = placer.place_stages_randomly(spec,model)
+print(rnd_placements)
+print(tree.nodes)
+print(placer.total_weight(tree))

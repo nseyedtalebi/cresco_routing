@@ -2,7 +2,7 @@ import networkx as nx
 import numpy as np
 from networkx.algorithms.approximation.steinertree import steiner_tree
 from networkx.algorithms.tree.mst import minimum_spanning_tree
-from networkx.classes.graphviews import subgraph_view
+from networkx.algorithms.operators.all import compose_all
 from random import sample,randint,seed,uniform
 from collections import namedtuple,Sequence
 from itertools import chain
@@ -62,6 +62,23 @@ def get_model_random_edge_weights(g,lo,hi,capacities):
     capacities = g.nodes.data()
     return g,weights,capacities
 
+def place_stages_randomly(spec,model):
+    placements = []
+    for stage in reversed(spec):
+        possible_placements = [node for node in model.nodes\
+         if model.nodes[node]['capacity'] >= stage['reqd_capacity']]
+        selected_node = sample(possible_placements,1)[0]
+        tree = steiner_tree(model,
+            list(set(stage['input_nodes']+[selected_node])))#terminals
+        best_placement = PlacementRecord(selected_node,
+            total_weight(tree),
+            tree)
+        placements.append(best_placement)
+        model.nodes[best_placement.node]['capacity'] = 0
+    tree = steiner_tree(model,[p.node for p in placements])
+    trees = [tree]+[p.tree for p in placements]
+    return list(reversed(placements)),compose_all(trees)
+
 def place_stages_individually(spec,model,algorithm):
     placements = []
     #start from last stage
@@ -72,9 +89,9 @@ def place_stages_individually(spec,model,algorithm):
         #In future versions, could reduce capacity by cost and allow multiple placements
         #on a single node
         model.nodes[best_placement.node]['capacity'] = 0
-    pipe_nodes = [placement.node for placement in placements]
-    tree = steiner_tree(model,pipe_nodes)
-    return list(reversed(placements)),PlacementRecord(None,total_weight(tree),tree)
+    tree = steiner_tree(model,[p.node for p in placements])
+    trees = [tree]+[p.tree for p in placements]
+    return list(reversed(placements)),compose_all(trees)
 
 def place_stages_iteratively(spec,model,algorithm):
     placements = []
@@ -89,8 +106,8 @@ def place_stages_iteratively(spec,model,algorithm):
             (r_spec[idx+1]['input_nodes']).append(best_placement.node)
         except IndexError as ex:
             pass#we've reached the last element
-    return list(reversed(placements))#don't have to return tree linking placed stages
-    #because we made each placed node part of the next stage's inputs
+    trees = [p.tree for p in placements]
+    return list(reversed(placements)),compose_all(trees)
 
 def get_random_pipe_spec(nodes,depth,num_inputs,req_capacities,add_output_node=True):
     spec = []
