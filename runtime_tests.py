@@ -1,7 +1,9 @@
 import placer
 import timeit
 import functools
+import pickle
 from statistics import mean
+placer.seed(1988)
 def prepare_functions(spec,model):
     return {'random':functools.partial(placer.place_stages_randomly,spec,model),
     'individual':functools.partial(placer.place_stages_individually,spec,model,
@@ -14,7 +16,7 @@ def prepare_functions(spec,model):
         model,'mst')
     }
 
-graph_sizes = range(3,33)#40
+graph_sizes = range(3,15)#40
 #[8,16,32,64,128]
 results = {}
 for size in graph_sizes:
@@ -23,9 +25,10 @@ for size in graph_sizes:
     spec = [{'input_nodes':[0,1,2],'reqd_capacity':1}]
     to_run = prepare_functions(spec,model)
     times = {name:mean(timeit.repeat(func,number=1,repeat=5)) for name,func in to_run.items()}
-    print(times)
+    #print(times)
     results[size] = times
-print(results)
+with open('runtimes.pickled','wb') as pickled:
+    pickle.dump(results,pickled)
 
 '''
 TODO:
