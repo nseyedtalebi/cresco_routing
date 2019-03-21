@@ -5,12 +5,13 @@ import matplotlib.pyplot as plt
 
 import placer
 
+#We don't actually want the functions, just the names
+method_names = [name for name in placer.prepare_functions(None,None).keys()]
+'''#*************************Graph Size********************************************
 with open('runtimes.pickled','rb') as pickled:
     runtimes = pickle.load(pickled)
 #print(runtimes)
 #runtimes[graph_size][method]
-#We don't actually want the functions but I can conveniently get a list of names
-method_names = [name for name in placer.prepare_functions(None,None).keys()]
 x_values = [graph_size for graph_size in runtimes.keys()]
 fig,ax = plt.subplots()
 for method in method_names:
@@ -22,6 +23,21 @@ for method in method_names:
 		y_values,
 		label=method)
 	ax.legend()
+plt.show()'''
+#*******************************Pipe Depth**************************************
+with open('pipe_depth_runtimes.pickled','rb') as pickled:
+    depth_runtimes = pickle.load(pickled)
+#print(depth_runtimes)
+#depth_runtimes[pipe_depth][method]
+x_values = [pipe_depth for pipe_depth in depth_runtimes.keys()]
+fig,ax = plt.subplots()
+for method in method_names:
+	y_values = [depth_runtimes[depth][method] for depth in x_values]
+	print(method)
+	for point in zip(x_values,y_values):
+		print(point)
+	ax.plot(x_values,
+		y_values,
+		label=method)
+	ax.legend()
 plt.show()
-#loop through dict of timing data, use zip with graph size to produce x,y pairs
-#for plotting

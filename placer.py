@@ -4,7 +4,7 @@ from networkx.algorithms.tree.mst import minimum_spanning_tree
 from networkx.algorithms.operators.all import compose_all
 from random import sample,randint,seed,uniform
 from collections import namedtuple,Sequence
-from itertools import chain
+from itertools import chain,product,filterfalse
 from math import floor
 
 import networkx as nx
@@ -72,15 +72,13 @@ def place_stages_randomly(spec,model):
         possible_placements = [node for node in model.nodes\
          if capacities[node] >= stage['reqd_capacity']]
         selected_node = sample(possible_placements,1)[0]
-        tree = steiner_tree(model,
-            list(set(stage['input_nodes']+[selected_node])))#terminals
+        tree = minimum_spanning_tree(model.subgraph(stage['input_nodes']+[selected_node]))
         best_placement = PlacementRecord(selected_node,
             total_weight(tree),
             tree)
         placements.append(best_placement)
         capacities[best_placement.node] = 0
-    tree = steiner_tree(model,[p.node for p in placements])
-    trees = [tree]+[p.tree for p in placements]
+    trees = [p.tree for p in placements]
     return list(reversed(placements)),compose_all(trees)
 
 def place_stages_individually(spec,model,algorithm):
