@@ -1,5 +1,4 @@
-import networkx as nx
-import numpy as np
+import functools
 from networkx.algorithms.approximation.steinertree import steiner_tree
 from networkx.algorithms.tree.mst import minimum_spanning_tree
 from networkx.algorithms.operators.all import compose_all
@@ -7,6 +6,9 @@ from random import sample,randint,seed,uniform
 from collections import namedtuple,Sequence
 from itertools import chain
 from math import floor
+
+import networkx as nx
+import numpy as np
 
 PlacementRecord = namedtuple('PlacementRecord',('node','weight','tree',))
 #initialize rng for reproducibility
@@ -142,3 +144,15 @@ def get_default_model_params(graph_size,fast_edge_pct):
     model_params['fast_edges'] = get_random_fast_edges(g.edges,fast_edge_pct)
     model_params['capacities'] = {node:1 for node in g.nodes}
     return model_params
+
+def prepare_functions(spec,model):
+    return {'random':functools.partial(place_stages_randomly,spec,model),
+    'individual':functools.partial(place_stages_individually,spec,model,
+        'steiner'),
+    'iterative':functools.partial(place_stages_iteratively,spec,model,
+        'steiner'),
+    'individual_mst':functools.partial(place_stages_individually,spec,
+        model,'mst'),
+    'iterative_mst':functools.partial(place_stages_iteratively,spec,
+        model,'mst')
+    }
