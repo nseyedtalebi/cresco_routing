@@ -41,7 +41,3 @@ for method in method_names:
 		label=method)
 	ax.legend()
 plt.show()
-
-#  D U D E! The networkx steiner_tree function computes the metric closure
-# and then the MST. I could get much better performance if I just do that myself
-# and only compute the metric closure once!

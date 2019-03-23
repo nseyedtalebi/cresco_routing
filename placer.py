@@ -1,7 +1,8 @@
 import functools
-from networkx.algorithms.approximation.steinertree import steiner_tree
+from networkx.algorithms.approximation.steinertree import metric_closure
 from networkx.algorithms.tree.mst import minimum_spanning_tree
 from networkx.algorithms.operators.all import compose_all
+from networkx.utils import pairwise
 from random import sample,randint,seed,uniform
 from collections import namedtuple,Sequence
 from itertools import chain,product,filterfalse
@@ -16,15 +17,17 @@ def get_placements(model,terminals,capacities,required_capacity,algorithm='stein
     placements = []
     if algorithm not in ('steiner','mst'):
         raise ValueError("algorithm must be one of these: 'steiner','mst'")
+    if algorithm == 'steiner':
+        M = metric_closure(model)
     for v in model.nodes:
         if capacities[v] >= required_capacity:
             terminals_U_v = list(set(terminals).union([v]))
             if algorithm == 'steiner':
-                tree = steiner_tree(model,terminals_U_v)
+                tree = steiner_tree_from_metric_closure(model, M, terminals_U_v)
             if algorithm == 'mst':
                 tree = minimum_spanning_tree(model.subgraph(terminals_U_v))
             cur_weight = total_weight(tree)
-            placements.append(PlacementRecord(v,cur_weight,tree))
+            placements.append(PlacementRecord(v, cur_weight, tree))
     ranked = sorted(placements,key=lambda p:p.weight)
     return ranked
 
@@ -93,7 +96,9 @@ def place_stages_individually(spec,model,algorithm):
         #In future versions, could reduce capacity by cost and allow multiple placements
         #on a single node
         capacities[best_placement.node] = 0
-    tree = steiner_tree(model,[p.node for p in placements])
+    M = metric_closure(model)
+    tree = steiner_tree_from_metric_closure(model, M, 
+                                           [p.node for p in placements])
     trees = [tree]+[p.tree for p in placements]
     return list(reversed(placements)),compose_all(trees)
 
@@ -103,20 +108,19 @@ def place_stages_iteratively(spec,model,algorithm):
     #start from last stage
     r_spec = list(reversed(spec))
     for idx,stage in enumerate(r_spec):
-        best_placement = get_placements(model,stage['input_nodes'],
-            capacities,stage['reqd_capacity'],algorithm)[0]
+        try:
+            inputs = stage['input_nodes']+[placements[idx-1].node]
+        except IndexError as ex:
+            inputs = stage['input_nodes']
+        best_placement = get_placements(model, inputs, capacities,
+                                        stage['reqd_capacity'], algorithm)[0]
         placements.append(best_placement)
         #Make sure this node isn't reused
         capacities[best_placement.node] = 0
-        try:
-            (r_spec[idx+1]['input_nodes']).append(best_placement.node)
-        except IndexError as ex:
-            pass#we've reached the last element
     trees = [p.tree for p in placements]
     return list(reversed(placements)),compose_all(trees)
 
 def get_random_pipe_spec(nodes,depth,num_inputs,req_capacities,add_output_node=True):
-    spec = []
     if not isinstance(num_inputs,Sequence):
         per = num_inputs
         num_inputs = [per for i in range(0,depth)]
@@ -125,10 +129,12 @@ def get_random_pipe_spec(nodes,depth,num_inputs,req_capacities,add_output_node=T
         req_capacities = [per for i in range(0,depth)]
     if add_output_node:
         num_inputs[-1] += 1
-    for i in range(0,depth):
+    return tuple({'input_nodes':sample(nodes,num_inputs[i]),
+            'reqd_capacity':req_capacities[i]} for i in range(0,depth))
+    '''for i in range(0,depth):
         spec.append({'input_nodes':sample(nodes,num_inputs[i]),
             'reqd_capacity':req_capacities[i]})
-    return spec
+    return spec'''
 
 def get_random_fast_edges(edges,pct_fast):
     if pct_fast < 0 or pct_fast > 1:
@@ -154,3 +160,38 @@ def prepare_functions(spec,model):
     'iterative_mst':functools.partial(place_stages_iteratively,spec,
         model,'mst')
     }
+
+def steiner_tree_from_metric_closure(G, M, terminal_nodes, weight='weight'):
+    """ Return an approximation to the minimum Steiner tree of a graph given its
+    metric closure
+
+    Parameters
+    ----------
+    G : NetworkX graph
+    H : Metric closure of G as computed by metric_closure() from the Steiner
+        tree module
+    terminal_nodes : list
+         A list of terminal nodes for which minimum steiner tree is
+         to be found.
+
+    Returns
+    -------
+    NetworkX graph
+        Approximation to the minimum steiner tree of `G` induced by
+        `terminal_nodes` .
+
+    Notes
+    -----
+    This function is a slightly modified version of the steiner tree function in
+    networkx.algorithms.approximation.steinertree.steiner_tree. It takes both G
+    and its metric closure as input. This is useful in situations where we want
+    to find Steiner trees for different sets of terminals in the same graph.
+    """
+    # Use the 'distance' attribute of each edge provided by the metric closure
+    # graph.
+    H = M.subgraph(terminal_nodes)
+    mst_edges = nx.minimum_spanning_edges(H, weight='distance', data=True)
+    # Create an iterator over each edge in each shortest path; repeats are okay
+    edges = chain.from_iterable(pairwise(d['path']) for u, v, d in mst_edges)
+    T = G.edge_subgraph(edges)
+    return T
