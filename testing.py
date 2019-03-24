@@ -1,4 +1,7 @@
 from random import sample
+import unittest
+import pdb
+import itertools
 
 import networkx as nx
 from networkx.algorithms.tree.mst import minimum_spanning_tree
@@ -11,69 +14,79 @@ def get_model_and_spec_for_test():
     g = nx.complete_graph(n=graph_size)
     spec = placer.get_random_pipe_spec(g.nodes, 
                                         2,#depth 
-                                        3,#num inputs per stage
+                                        3,#3,#num inputs per stage
                                         1,#reqd capacity per stage
                                         True)#add output node
     terminals = [node for stage in spec for node in stage['input_nodes']]
     #add two extra nodes for where we want the placements
-    placements = sample([node for node in g.nodes if node not in terminals],2)
-    target_tree = minimum_spanning_tree(g.subgraph(terminals+placements))
-    fast_edges = list(target_tree.edges)
+    placements = []
+    fast_edges = []
+    for stage in spec:
+        inputs = stage['input_nodes']
+        possible_placements = [node for node in g.nodes if node not in inputs and node not in placements]
+        placement = sample(possible_placements,1)[0]
+        placements.append(placement)
+        fast_edges += list(itertools.product([placement],inputs))
+    fast_edges += [(placements[0],placements[1])]
     capacities = {node:1 if node in placements else 0 for node in g.nodes}
     model_params = {'g':g, 'slow_edge':10, 'fast_edge':1, 
                     'fast_edges':fast_edges, 'capacities': capacities}
-    return placer.get_model(**model_params)[0], spec, placements, target_tree
+    return placer.get_model(**model_params)[0], spec, placements, g.edge_subgraph(fast_edges)
 
-def get_model_and_test_spec():
-    #inputs for stage 1: 0,1,4
-    #stage 1 to be placed at 5
-    #inputs for stage 2: 6,7,11,15
-    #stage 2 to be placed at 10
-    #5 and 10 should have capacity > 0, others all 0
-    graph_size=16
-    model_params = {'g':nx.complete_graph(n=graph_size),'slow_edge':100,'fast_edge':1}
-    model_params['fast_edges'] = [
-    (0,5),(1,5),(4,5),#three edges for inputs
-    (5,10),#one edge to link stages
-    (10,6),(10,7),(10,11),#three edges for inputs
-    (10,15)#to the output node
-    ]
-    model_params['capacities'] = {node:1 for node in model_params['g'].nodes}
-    model_params['capacities'][5] = 1
-    model_params['capacities'][10] = 1
-    model,weights,capacities = placer.get_model(**model_params)
-    pipe_spec = [{'input_nodes':[0,1,4],'reqd_capacity':1},#first stage
-    {'input_nodes':[6,7,11,15],'reqd_capacity':1}#second stage
-    ]
-    #return placer.total_weight(model_params['g'])
-    return model,pipe_spec
+def get_forced_example():
+    graph_size = 9
+    g = nx.complete_graph(n=graph_size)
+    spec = (placer.PipeStage([0,1,2],1),placer.PipeStage([4,5,6,7],1))
+    terminals = [node for stage in spec for node in stage['input_nodes']]
+    #add two extra nodes for where we want the placements
+    placements = [2,8]
+    fast_edges = []
+    fast_edges += list(itertools.product([2],spec[0].input_nodes))
+    fast_edges += list(itertools.product([8],spec[1].input_nodes))
+    fast_edges += [(2,8)]
+    capacities = {node:1 if node in placements else 0 for node in g.nodes}
+    model_params = {'g':g, 'slow_edge':10, 'fast_edge':1, 
+                    'fast_edges':fast_edges, 'capacities': capacities}
+    return placer.get_model(**model_params)[0], spec, placements, g.edge_subgraph(fast_edges)
 
-def compare_placements(one,other):
-    one_nodes = [p.node for p in one]
-    other_nodes = [p.node for p in other]
-    return one_nodes == other_nodes
+model,spec,pl,tgt = get_forced_example()
+p,t = placer.place_stages(spec,model,'mst',iterative=True)
+p2,t2 = placer.place_stages(spec,model,'steiner',iterative=True)
+print(nx.is_isomorphic(t,tgt))
+print(nx.is_isomorphic(t2,tgt))
+#pdb.set_trace()
+'''class TestPlacer(unittest.TestCase):
 
-model, spec, placements, target_tree = get_model_and_spec_for_test()
-it_placements,it_tree = placer.place_stages_iteratively(spec,model,'steiner')
-print(nx.is_isomorphic(target_tree,it_tree))
-print('done')
-'''uniform_model_params = placer.get_default_model_params(8,1)
-model,weights,capacities = placer.get_model(**uniform_model_params)
+    def setUp(self):
+        self.model, self.spec, self.placements, self.target_tree =\
+        get_model_and_spec_for_test()
 
-model,spec = get_model_and_test_spec()
-it_placements,it_tree = placer.place_stages_iteratively(spec,model,'mst')
-print(it_placements)
-print(sorted(it_tree.edges))
-print(placer.total_weight(it_tree))
+    def test_placers(self):
+        print(self.model)
+        print(self.spec)
+        print(self.placements)
+        print(self.target_tree)
+        to_test = placer.prepare_functions(self.spec,self.model)
+        for method,func in to_test.items():
+            if method != 'random':
+                with self.subTest(method=method):
+                    #if 'mst' in method:
+                    #    pdb.set_trace()
+                    test_placements,test_tree = func()
+                    print(method)
+                    print(self.target_tree.edges)
+                    print(test_tree.edges)
+                    print(set(test_tree.edges).difference(set((self.target_tree.edges))))
+                    print(nx.is_isomorphic(self.target_tree,test_tree))
+                    print('Fast edges:')
+                    for u,v,data in self.model.edges.data():
+                        if data['weight'] == 1:
+                            print(u,v)
+                    print('Capacities')
+                    for node,cap in self.model.nodes.data():
+                        if cap['capacity'] > 0:
+                            print(node)
+                    self.assertTrue(nx.is_isomorphic(self.target_tree,test_tree))
 
-model,spec = get_model_and_test_spec()
-ind_placements,ind_tree = placer.place_stages_individually(spec,model,'mst')
-print(ind_placements)
-print(sorted(ind_tree.edges))
-print(placer.total_weight(ind_tree))
-
-model,spec = get_model_and_test_spec()
-rnd_placements,rnd_tree = placer.place_stages_randomly(spec,model)
-print(rnd_placements)
-print(sorted(rnd_tree.edges))
-print(placer.total_weight(rnd_tree))'''
+if __name__ == '__main__':
+    unittest.main()'''
