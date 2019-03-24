@@ -8,7 +8,7 @@ import placer
 #We don't actually want the functions, just the names
 method_names = [name for name in placer.prepare_functions(None,None).keys()]
 #*************************Graph Size********************************************
-with open('graph_size_runtimes.pickled','rb') as pickled:
+'''with open('graph_size_runtimes.pickled','rb') as pickled:
     runtimes = pickle.load(pickled)
 #print(runtimes)
 #runtimes[graph_size][method]
@@ -32,9 +32,9 @@ ax.set_yticks([i*0.01 for i in range(0,110,10)])
 ax.set_yticklabels([f'{i*0.01:.3}' for i in range(0,110,10)])
 ax.grid()
 ax.legend()
-plt.show()
+plt.show()'''
 #*******************************Pipe Depth**************************************
-with open('pipe_depth_runtimes.pickled','rb') as pickled:
+'''with open('pipe_depth_runtimes.pickled','rb') as pickled:
         depth_runtimes = pickle.load(pickled)
 #print(depth_runtimes)
 #depth_runtimes[pipe_depth][method]
@@ -56,6 +56,29 @@ ax.set_xticks([1]+[i for i in range(4,68,4)])
 ax.set_xticklabels([1]+[i for i in range(4,68,4)])
 ax.set_yticks([i*0.01 for i in range(0,110,10)])
 ax.set_yticklabels([f'{i*0.01:.3}' for i in range(0,110,10)])
+ax.grid()
+ax.legend()
+plt.show()'''
+#************************Performance,fast edge pct******************************
+with open('performance_fast_edge_pct.pickled','rb') as picklein:
+    results_for_pct = pickle.load(picklein)
+    x_values = [pct for pct in results_for_pct.keys()]
+for method in method_names:
+	y_values = [mean(res[method]) for pct,res in results_for_pct.items()]
+	print(method)
+	for point in zip(x_values,y_values):
+		print(point)
+	ax.plot(x_values,
+		y_values,
+		label=method)
+'''ax.set_xlabel('Pipeline Depth (# Stages)')
+ax.set_ylabel('Time (s)')
+ax.set_title('Run Time Versus Pipeline Depth')
+ax.set_xlim(1,63)
+ax.set_xticks([1]+[i for i in range(4,68,4)])
+ax.set_xticklabels([1]+[i for i in range(4,68,4)])
+ax.set_yticks([i*0.01 for i in range(0,110,10)])
+ax.set_yticklabels([f'{i*0.01:.3}' for i in range(0,110,10)])'''
 ax.grid()
 ax.legend()
 plt.show()
