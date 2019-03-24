@@ -158,6 +158,16 @@ def get_default_model_params(graph_size,fast_edge_pct):
     model_params['capacities'] = {node:1 for node in g.nodes}
     return model_params
 
+def get_randomized_model(graph_size,mu,sigma):
+    g = nx.complete_graph(n=graph_size)
+    for node,data in g.nodes.data():
+        normal = np.random.normal(mu,sigma)
+        data['capacity'] = normal if normal > 0 else 0
+    for u,v,data in g.edges.data():
+        normal = np.random.normal(mu,sigma)
+        data['weight'] = normal if normal > 1 else 1
+    return g
+
 def prepare_functions(spec,model):
     return {'random':functools.partial(place_stages_randomly,spec,model),
     'individual_steiner':functools.partial(place_stages,spec,model,'steiner',
