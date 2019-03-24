@@ -33,7 +33,7 @@ def get_model_and_spec_for_test():
                     'fast_edges':fast_edges, 'capacities': capacities}
     return placer.get_model(**model_params)[0], spec, placements, g.edge_subgraph(fast_edges)
 
-def get_forced_example():
+'''def get_forced_example():
     graph_size = 9
     g = nx.complete_graph(n=graph_size)
     spec = (placer.PipeStage([0,1,2],1),placer.PipeStage([4,5,6,7],1))
@@ -54,26 +54,24 @@ p,t = placer.place_stages(spec,model,'mst',iterative=True)
 p2,t2 = placer.place_stages(spec,model,'steiner',iterative=True)
 print(nx.is_isomorphic(t,tgt))
 print(nx.is_isomorphic(t2,tgt))
-#pdb.set_trace()
-'''class TestPlacer(unittest.TestCase):
+#pdb.set_trace()'''
+class TestPlacer(unittest.TestCase):
 
     def setUp(self):
         self.model, self.spec, self.placements, self.target_tree =\
         get_model_and_spec_for_test()
 
     def test_placers(self):
-        print(self.model)
+        '''print(self.model)
         print(self.spec)
         print(self.placements)
-        print(self.target_tree)
+        print(self.target_tree)'''
         to_test = placer.prepare_functions(self.spec,self.model)
         for method,func in to_test.items():
             if method != 'random':
                 with self.subTest(method=method):
-                    #if 'mst' in method:
-                    #    pdb.set_trace()
                     test_placements,test_tree = func()
-                    print(method)
+                    '''print(method)
                     print(self.target_tree.edges)
                     print(test_tree.edges)
                     print(set(test_tree.edges).difference(set((self.target_tree.edges))))
@@ -85,8 +83,8 @@ print(nx.is_isomorphic(t2,tgt))
                     print('Capacities')
                     for node,cap in self.model.nodes.data():
                         if cap['capacity'] > 0:
-                            print(node)
+                            print(node)'''
                     self.assertTrue(nx.is_isomorphic(self.target_tree,test_tree))
 
 if __name__ == '__main__':
-    unittest.main()'''
+    unittest.main()

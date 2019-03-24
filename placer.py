@@ -89,8 +89,6 @@ def place_stages(spec,model,algorithm,iterative=True):
             best_placement = get_placements(model, inputs,
                 capacities,stage['reqd_capacity'], model_metric_closure=M)[0]
         if algorithm == 'mst':
-            if idx == 1:
-                pdb.set_trace()
             best_placement = get_placements(model, inputs,
                 capacities,stage['reqd_capacity'])[0]
         if algorithm not in ('steiner','mst'):
@@ -121,7 +119,7 @@ def get_random_pipe_spec(nodes,depth,num_inputs,req_capacities,add_output_node=T
         eligible_nodes = [node for node in nodes if node not in picked]
         stage_inputs = sample(eligible_nodes,num_inputs[i])
         picked += stage_inputs
-    stages.append(PipeStage(stage_inputs,1))
+        stages.append(PipeStage(stage_inputs,1))
     return tuple(stages)
     '''return tuple({'input_nodes':sample(nodes,num_inputs[i]),
             'reqd_capacity':req_capacities[i]} for i in range(0,depth))'''
