@@ -12,7 +12,7 @@ def test_runtimes_vs_graph_size(max_size):
     for size in graph_sizes:
         uniform_model_params = placer.get_default_model_params(size,1)
         model,weights,capacities = placer.get_model(**uniform_model_params)
-        spec = [{'input_nodes':[0,1,2],'reqd_capacity':1}]
+        spec = (placer.PipeStage([0,1,2],1),)
         to_run = placer.prepare_functions(spec,model)
         times = {name:mean(timeit.repeat(func,number=1,repeat=repeat_num_times)) for name,func in to_run.items()}
         print('\n'+str(times)+'\n')
@@ -39,11 +39,11 @@ def test_runtimes_vs_pipe_depth(graph_size,max_depth):
         pipe_depth_runtimes[depth] = times
     return pipe_depth_runtimes
 
-'''graph_size_runtimes = test_runtimes_vs_graph_size(32)
+graph_size_runtimes = test_runtimes_vs_graph_size(128)
 with open('graph_size_runtimes.pickled','wb') as pickled:
-   pickle.dump(graph_size_runtimes,pickled)'''
+   pickle.dump(graph_size_runtimes,pickled)
 
-pipe_depth_runtimes = test_runtimes_vs_pipe_depth(16,15)
+pipe_depth_runtimes = test_runtimes_vs_pipe_depth(64,63)
 print(pipe_depth_runtimes)
 with open('pipe_depth_runtimes.pickled','wb') as pickled:
     pickle.dump(pipe_depth_runtimes,pickled)

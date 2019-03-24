@@ -7,8 +7,8 @@ import placer
 
 #We don't actually want the functions, just the names
 method_names = [name for name in placer.prepare_functions(None,None).keys()]
-'''#*************************Graph Size********************************************
-with open('runtimes.pickled','rb') as pickled:
+#*************************Graph Size********************************************
+with open('graph_size_runtimes.pickled','rb') as pickled:
     runtimes = pickle.load(pickled)
 #print(runtimes)
 #runtimes[graph_size][method]
@@ -23,10 +23,10 @@ for method in method_names:
 		y_values,
 		label=method)
 	ax.legend()
-plt.show()'''
+plt.show()
 #*******************************Pipe Depth**************************************
-with open('pipe_depth_runtimes.pickled','rb') as pickled:
-    depth_runtimes = pickle.load(pickled)
+'''with open('pipe_depth_runtimes.pickled','rb') as pickled:
+        depth_runtimes = pickle.load(pickled)
 #print(depth_runtimes)
 #depth_runtimes[pipe_depth][method]
 x_values = [pipe_depth for pipe_depth in depth_runtimes.keys()]
@@ -40,4 +40,4 @@ for method in method_names:
 		y_values,
 		label=method)
 	ax.legend()
-plt.show()
+plt.show()'''

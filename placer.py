@@ -58,11 +58,11 @@ def get_model(g,slow_edge,fast_edge,fast_edges,capacities):
 def place_stages_randomly(spec,model):
     placements = []
     capacities = get_capacity_dict(model)
-    for stage in reversed(spec):
+    for stage in tuple(reversed(spec)):
         possible_placements = [node for node in model.nodes\
          if capacities[node] >= stage['reqd_capacity']]
         selected_node = sample(possible_placements,1)[0]
-        tree = minimum_spanning_tree(model.subgraph(stage['input_nodes']+[selected_node]))
+        tree = minimum_spanning_tree(model.subgraph(stage['input_nodes']+(selected_node,)))
         best_placement = PlacementRecord(selected_node,
             total_weight(tree),
             tree)
