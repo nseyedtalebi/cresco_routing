@@ -4,7 +4,7 @@ import pickle
 from statistics import mean
 
 placer.seed(1988)#Does this even matter?
-repeat_num_times = 3
+repeat_num_times = 1
 def test_runtimes_vs_graph_size(max_size):
     graph_sizes = range(3,max_size)
     #[8,16,32,64,128]

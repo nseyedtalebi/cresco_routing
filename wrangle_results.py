@@ -1,4 +1,5 @@
 import pickle
+from statistics import mean
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -62,7 +63,8 @@ plt.show()'''
 #************************Performance,fast edge pct******************************
 with open('performance_fast_edge_pct.pickled','rb') as picklein:
     results_for_pct = pickle.load(picklein)
-    x_values = [pct for pct in results_for_pct.keys()]
+x_values = [pct for pct in results_for_pct.keys()]
+fig,ax = plt.subplots()
 for method in method_names:
 	y_values = [mean(res[method]) for pct,res in results_for_pct.items()]
 	print(method)
