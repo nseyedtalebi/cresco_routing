@@ -72,7 +72,7 @@ def place_stages_randomly(spec,model):
     return list(reversed(placements)),compose_all(trees)
 
 def place_stages(spec,model,algorithm,iterative=True):
-    if algorithm == 'steiner' or not iterative:
+    if algorithm == 'steiner':
         M = metric_closure(model)
     placements = []
     capacities = get_capacity_dict(model)
@@ -100,8 +100,13 @@ def place_stages(spec,model,algorithm,iterative=True):
         capacities[best_placement.node] = 0
     trees = [p.tree for p in placements]
     if not iterative:#tie the placed nodes together
-        trees += [steiner_tree_from_metric_closure(model, M, 
+        if algorithm == 'steiner':
+            trees += [steiner_tree_from_metric_closure(model, M, 
                                            [p.node for p in placements])]
+        else:
+            trees += [minimum_spanning_tree(model.subgraph(
+                                            [p.node for p in placements]
+                                            ))]
     return tuple(reversed(placements)),compose_all(trees)
 
 def get_random_pipe_spec(nodes,depth,num_inputs,req_capacities,add_output_node=True):

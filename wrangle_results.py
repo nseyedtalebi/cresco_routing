@@ -22,10 +22,19 @@ for method in method_names:
 	ax.plot(x_values,
 		y_values,
 		label=method)
-	ax.legend()
+ax.set_xlabel('Graph Size (# nodes)')
+ax.set_ylabel('Time (s)')
+ax.set_title('Run Time Versus Graph Size')
+ax.set_xlim(3,128)
+ax.set_xticks([3]+[i for i in range(10,129,10)])
+ax.set_xticklabels([3]+[i for i in range(10,129,10)])
+ax.set_yticks([i*0.01 for i in range(0,110,10)])
+ax.set_yticklabels([f'{i*0.01:.3}' for i in range(0,110,10)])
+ax.grid()
+ax.legend()
 plt.show()
 #*******************************Pipe Depth**************************************
-'''with open('pipe_depth_runtimes.pickled','rb') as pickled:
+with open('pipe_depth_runtimes.pickled','rb') as pickled:
         depth_runtimes = pickle.load(pickled)
 #print(depth_runtimes)
 #depth_runtimes[pipe_depth][method]
@@ -39,5 +48,14 @@ for method in method_names:
 	ax.plot(x_values,
 		y_values,
 		label=method)
-	ax.legend()
-plt.show()'''
+ax.set_xlabel('Pipeline Depth (# Stages)')
+ax.set_ylabel('Time (s)')
+ax.set_title('Run Time Versus Pipeline Depth')
+ax.set_xlim(1,63)
+ax.set_xticks([1]+[i for i in range(4,68,4)])
+ax.set_xticklabels([1]+[i for i in range(4,68,4)])
+ax.set_yticks([i*0.01 for i in range(0,110,10)])
+ax.set_yticklabels([f'{i*0.01:.3}' for i in range(0,110,10)])
+ax.grid()
+ax.legend()
+plt.show()

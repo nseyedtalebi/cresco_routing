@@ -10,11 +10,15 @@ import networkx.algorithms.isomorphism as iso
 import placer
 
 def get_model_and_spec_for_test():
+    '''
+    Don't mess with the random pipe spec parameters. The test is written with
+    them in mind and will break if you change them.
+    '''
     graph_size = 16
     g = nx.complete_graph(n=graph_size)
     spec = placer.get_random_pipe_spec(g.nodes, 
                                         2,#depth 
-                                        3,#3,#num inputs per stage
+                                        3,#num inputs per stage
                                         1,#reqd capacity per stage
                                         True)#add output node
     terminals = [node for stage in spec for node in stage['input_nodes']]
