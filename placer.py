@@ -126,12 +126,6 @@ def get_random_pipe_spec(nodes,depth,num_inputs,req_capacities,add_output_node=T
         picked += stage_inputs
         stages.append(PipeStage(stage_inputs,1))
     return tuple(stages)
-    '''return tuple({'input_nodes':sample(nodes,num_inputs[i]),
-            'reqd_capacity':req_capacities[i]} for i in range(0,depth))'''
-    '''for i in range(0,depth):
-        spec.append({'input_nodes':sample(nodes,num_inputs[i]),
-            'reqd_capacity':req_capacities[i]})
-    return spec'''
 
 @dataclass(frozen=True)
 class PipeStage:

@@ -1,101 +1,109 @@
 import placer
 import timeit
 import pickle
+import argparse
 from statistics import mean
 
 placer.seed(1988)#Does this even matter?
-'''
-graph_size = 32
-#fast_edge_pcts = [pct*0.01 for pct in range(5,100,5)]
-fast_edge_pcts = [pct*0.01 for pct in range(2,100,2)]
-iterations = 20
 
-results_for_pct = {}
-for fast_edge_pct in fast_edge_pcts:
-    results = {'random':[],
-                'individual_steiner':[],
-                'iterative_steiner':[],
-                'individual_mst':[],
-                'iterative_mst':[]
-            }
-    for iteration in range(0,iterations):
-        print(f'{fast_edge_pct*100} % fast edges, iteration {iteration}')
-        model_params = placer.get_default_model_params(graph_size,fast_edge_pct)
-        model,weights,capacities = placer.get_model(**model_params)
-        spec = placer.get_random_pipe_spec(model.nodes,8,#depth
-                                                 3,#num inputs per stage
-                                                 1)#reqd capacity per stage
-        to_run = placer.prepare_functions(spec,model)
-        for name,func in to_run.items():
-            placements,tree = func()
-            results[name].append(placer.total_weight(tree))
-    results_for_pct[fast_edge_pct] = results
-with open('performance_fast_edge_pct.pickled','wb') as pickleout:
-    pickle.dump(results_for_pct,pickleout)
-'''
-'''
-graph_size = 64
-iterations = 10
-results_for_depth = {}
-for depth in range(1,33):
-    results = {'random':[],
-                'individual_steiner':[],
-                'iterative_steiner':[],
-                'individual_mst':[],
-                'iterative_mst':[]
-            }
-    for iteration in range(0,iterations):
-        print(f'{depth} pipe depth, iteration {iteration}')
-        #choose fast edge pct based on point of max separation between
-        #steiner and mst methods
-        model_params = placer.get_default_model_params(graph_size,0.15)
-        model,weights,capacities = placer.get_model(**model_params)
-        spec = placer.get_random_pipe_spec(model.nodes,depth,#depth
-                                                 1,#num inputs per stage
-                                                 1)#reqd capacity per stage
-        to_run = placer.prepare_functions(spec,model)
-        for name,func in to_run.items():
-            placements,tree = func()
-            results[name].append(placer.total_weight(tree))
-    results_for_depth[depth] = results
-print(results_for_depth)
-with open('performance_pipe_depth.pickled','wb') as pickleout:
-    pickle.dump(results_for_depth,pickleout)
-'''
+def run_fast_edge_tests():
+    graph_size = 64
+    #fast_edge_pcts = [pct*0.01 for pct in range(5,100,5)]
+    fast_edge_pcts = [pct*0.01 for pct in range(2,100,2)]
+    iterations = 20
 
-graph_size = 64
-iterations = 10
-results_for_sigma = {}
-for sigma in (i*0.1 for i in range(10,50,1)):
-    results = {'random':[],
-                'individual_steiner':[],
-                'iterative_steiner':[],
-                'individual_mst':[],
-                'iterative_mst':[]
-            }
-    for iteration in range(0,iterations):
-        print(f'Sigma:{sigma}, iteration {iteration}')       
-        model = placer.get_randomized_model(graph_size,10,sigma)
-        spec = placer.get_random_pipe_spec(model.nodes,8,#depth
-                                                 3,#num inputs per stage
-                                                 1)#reqd capacity per stage
-        to_run = placer.prepare_functions(spec,model)
-        for name,func in to_run.items():
-            placements,tree = func()
-            results[name].append(placer.total_weight(tree))
-    results_for_sigma[sigma] = results
-print(results_for_sigma)
-with open('performance_randomized_sigma.pickled','wb') as pickleout:
-    pickle.dump(results_for_sigma,pickleout)
+    results_for_pct = {}
+    for fast_edge_pct in fast_edge_pcts:
+        results = {'random':[],
+                    'individual_steiner':[],
+                    'iterative_steiner':[],
+                    'individual_mst':[],
+                    'iterative_mst':[]
+                }
+        for iteration in range(0,iterations):
+            print(f'{fast_edge_pct*100} % fast edges, iteration {iteration}')
+            model_params = placer.get_default_model_params(graph_size,fast_edge_pct)
+            model,weights,capacities = placer.get_model(**model_params)
+            spec = placer.get_random_pipe_spec(model.nodes,8,#depth
+                                                     3,#num inputs per stage
+                                                     1)#reqd capacity per stage
+            to_run = placer.prepare_functions(spec,model)
+            for name,func in to_run.items():
+                placements,tree = func()
+                if name == 'individual_steiner':
+                    results['est_lower_bound'] = [sum((placer.total_weight(p.tree) for p in placements))]
+                results[name].append(placer.total_weight(tree))
+        results_for_pct[fast_edge_pct] = results
+    with open('performance_fast_edge_pct.pickled','wb') as pickleout:
+        pickle.dump(results_for_pct,pickleout)
 
-'''
-things to check, all averaged over many different runs and for both approaches, MST:
+def run_pipe_depth_tests():
+    graph_size = 64
+    iterations = 20
+    results_for_depth = {}
+    for depth in range(1,33):
+        results = {'random':[],
+                    'individual_steiner':[],
+                    'iterative_steiner':[],
+                    'individual_mst':[],
+                    'iterative_mst':[]
+                }
+        for iteration in range(0,iterations):
+            print(f'{depth} pipe depth, iteration {iteration}')
+            #choose fast edge pct based on point of max separation between
+            #steiner and mst methods
+            model_params = placer.get_default_model_params(graph_size,0.15)
+            model,weights,capacities = placer.get_model(**model_params)
+            spec = placer.get_random_pipe_spec(model.nodes,depth,#depth
+                                                     1,#num inputs per stage
+                                                     1)#reqd capacity per stage
+            to_run = placer.prepare_functions(spec,model)
+            for name,func in to_run.items():
+                placements,tree = func()
+                if name == 'individual_steiner':
+                    results['est_lower_bound'] = [sum((placer.total_weight(p.tree) for p in placements))]
+                results[name].append(placer.total_weight(tree))
+        results_for_depth[depth] = results
+    print(results_for_depth)
+    with open('performance_pipe_depth.pickled','wb') as pickleout:
+        pickle.dump(results_for_depth,pickleout)
 
--results for both approaches and MST with different densities of fast edges (lots,few, etc)
-!!draft done, needs prettying up
+def run_randomized_model_tests():
+    graph_size = 64
+    iterations = 20
+    results_for_sigma = {}
+    for sigma in (i*0.1 for i in range(10,50,1)):
+        results = {'random':[],
+                    'individual_steiner':[],
+                    'iterative_steiner':[],
+                    'individual_mst':[],
+                    'iterative_mst':[]
+                }
+        for iteration in range(0,iterations):
+            print(f'Sigma:{sigma}, iteration {iteration}')       
+            model = placer.get_randomized_model(graph_size,10,sigma)
+            spec = placer.get_random_pipe_spec(model.nodes,8,#depth
+                                                     3,#num inputs per stage
+                                                     1)#reqd capacity per stage
+            to_run = placer.prepare_functions(spec,model)
+            for name,func in to_run.items():
+                placements,tree = func()
+                results[name].append(placer.total_weight(tree))
+                if name == 'individual_steiner':
+                    results['est_lower_bound'] = [sum((placer.total_weight(p.tree) for p in placements))]
+        results_for_sigma[sigma] = results
 
--results for both approaches and MST with randomized edge weights+capacities
+    print(results_for_sigma)
+    with open('performance_randomized_sigma.pickled','wb') as pickleout:
+        pickle.dump(results_for_sigma,pickleout)
 
--runtime and results for all with a few different pipeline depths
-!!in progress
-'''
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser("Run tests to get simulation results for placer.py")
+    parser.add_argument('test',help='The name of the test to run. One of either "randomized", "pipe-depth" or "fast-edges"')
+    args = parser.parse_args()
+    if args.test == 'randomized':
+        run_randomized_model_tests()
+    if args.test == 'pipe-depth':
+        run_pipe_depth_tests()
+    if args.test == 'fast-edges':
+        run_fast_edge_tests()
