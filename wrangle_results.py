@@ -74,6 +74,12 @@ for method in method_names:
 	ax.plot(x_values,
 		y_values,
 		label=method)
+ax.set_xlabel('Fast Edge Fraction (# Fast Edges/# Edges)')
+ax.set_ylabel('Total Pipeline Cost')
+ax.set_title('Total Pipeline Cost versus Fast Edge Fraction')
+ax.set_xlim(0,1)
+ax.set_xticks([0.02]+[i*0.01 for i in range(10,100,10)])
+ax.set_yticks([i for i in range(0,300,25)])
 ax.grid()
 ax.legend()
 plt.show()
@@ -90,10 +96,17 @@ for method in method_names:
 	ax.plot(x_values,
 		y_values,
 		label=method)
+ax.set_xlabel('Pipe Depth (# stages)')
+ax.set_ylabel('Total Pipeline Cost')
+ax.set_title('Total Pipeline Cost versus Pipe Depth')
+ax.set_xlim(1,20)
+ax.set_xticks([1]+[i for i in range(2,22,2)])
+ax.set_yticks([i for i in range(0,300,25)])
 ax.grid()
 ax.legend()
 plt.show()
 #*******************Performance,sigma**************************************
+
 with open('performance_randomized_sigma.pickled','rb') as picklein:
     results_for_sigma = pickle.load(picklein)
 x_values = [sigma for sigma in results_for_sigma.keys()]
@@ -106,6 +119,12 @@ for method in method_names:
 	ax.plot(x_values,
 		y_values,
 		label=method)
+ax.set_xlabel('Sigma')
+ax.set_ylabel('Total Pipeline Cost')
+ax.set_title('Total Pipeline Cost versus Sigma')
+ax.set_xlim(1,5)
+ax.set_xticks([i*0.1 for i in range(10,50,5)])
+ax.set_yticks([i for i in range(50,250,25)])
 ax.grid()
 ax.legend()
 plt.show()

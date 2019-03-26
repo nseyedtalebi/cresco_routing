@@ -1,16 +1,21 @@
-import placer
 import timeit
 import pickle
 import argparse
 from statistics import mean
+from random import sample
+from math import fsum
+
+import networkx as nx
+
+import placer
 
 placer.seed(1988)#Does this even matter?
 
 def run_fast_edge_tests():
-    graph_size = 64
+    graph_size = 32
     #fast_edge_pcts = [pct*0.01 for pct in range(5,100,5)]
     fast_edge_pcts = [pct*0.01 for pct in range(2,100,2)]
-    iterations = 20
+    iterations = 40
 
     results_for_pct = {}
     for fast_edge_pct in fast_edge_pcts:
@@ -18,7 +23,8 @@ def run_fast_edge_tests():
                     'individual_steiner':[],
                     'iterative_steiner':[],
                     'individual_mst':[],
-                    'iterative_mst':[]
+                    'iterative_mst':[],
+                    'est_lower_bound':[]
                 }
         for iteration in range(0,iterations):
             print(f'{fast_edge_pct*100} % fast edges, iteration {iteration}')
@@ -31,28 +37,30 @@ def run_fast_edge_tests():
             for name,func in to_run.items():
                 placements,tree = func()
                 if name == 'individual_steiner':
-                    results['est_lower_bound'] = [sum((placer.total_weight(p.tree) for p in placements))]
+                    composed = nx.compose_all((p.tree for p in placements))
+                    results['est_lower_bound'] += [placer.total_weight(composed)]
                 results[name].append(placer.total_weight(tree))
         results_for_pct[fast_edge_pct] = results
     with open('performance_fast_edge_pct.pickled','wb') as pickleout:
         pickle.dump(results_for_pct,pickleout)
 
 def run_pipe_depth_tests():
-    graph_size = 64
-    iterations = 20
+    graph_size = 32
+    iterations = 40
     results_for_depth = {}
-    for depth in range(1,33):
+    for depth in range(1,20):
         results = {'random':[],
                     'individual_steiner':[],
                     'iterative_steiner':[],
                     'individual_mst':[],
-                    'iterative_mst':[]
+                    'iterative_mst':[],
+                    'est_lower_bound':[]
                 }
         for iteration in range(0,iterations):
             print(f'{depth} pipe depth, iteration {iteration}')
             #choose fast edge pct based on point of max separation between
             #steiner and mst methods
-            model_params = placer.get_default_model_params(graph_size,0.15)
+            model_params = placer.get_default_model_params(graph_size,0.05)
             model,weights,capacities = placer.get_model(**model_params)
             spec = placer.get_random_pipe_spec(model.nodes,depth,#depth
                                                      1,#num inputs per stage
@@ -60,29 +68,32 @@ def run_pipe_depth_tests():
             to_run = placer.prepare_functions(spec,model)
             for name,func in to_run.items():
                 placements,tree = func()
-                if name == 'individual_steiner':
-                    results['est_lower_bound'] = [sum((placer.total_weight(p.tree) for p in placements))]
                 results[name].append(placer.total_weight(tree))
+                if name == 'individual_steiner':
+                    composed = nx.compose_all((p.tree for p in placements))
+                    results['est_lower_bound'] += [placer.total_weight(composed)]
         results_for_depth[depth] = results
     print(results_for_depth)
     with open('performance_pipe_depth.pickled','wb') as pickleout:
         pickle.dump(results_for_depth,pickleout)
 
 def run_randomized_model_tests():
-    graph_size = 64
-    iterations = 20
+    graph_size = 32
+    iterations = 40
+    pipe_depth = 8
     results_for_sigma = {}
     for sigma in (i*0.1 for i in range(10,50,1)):
         results = {'random':[],
                     'individual_steiner':[],
                     'iterative_steiner':[],
                     'individual_mst':[],
-                    'iterative_mst':[]
+                    'iterative_mst':[],
+                    'est_lower_bound':[]
                 }
         for iteration in range(0,iterations):
             print(f'Sigma:{sigma}, iteration {iteration}')       
             model = placer.get_randomized_model(graph_size,10,sigma)
-            spec = placer.get_random_pipe_spec(model.nodes,8,#depth
+            spec = placer.get_random_pipe_spec(model.nodes,pipe_depth,#depth
                                                      3,#num inputs per stage
                                                      1)#reqd capacity per stage
             to_run = placer.prepare_functions(spec,model)
@@ -90,7 +101,8 @@ def run_randomized_model_tests():
                 placements,tree = func()
                 results[name].append(placer.total_weight(tree))
                 if name == 'individual_steiner':
-                    results['est_lower_bound'] = [sum((placer.total_weight(p.tree) for p in placements))]
+                    composed = nx.compose_all((p.tree for p in placements))
+                    results['est_lower_bound'] += [placer.total_weight(composed)]
         results_for_sigma[sigma] = results
 
     print(results_for_sigma)
