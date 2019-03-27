@@ -2,16 +2,19 @@
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \usepackage{hyperref}
-\usepackage{algorithm}% http://ctan.org/pkg/algorithms
+\usepackage{algorithm}
+%\usepackage{algorithmic}% http://ctan.org/pkg/algorithms
 \usepackage{algpseudocode}% http://ctan.org/pkg/algorithmicx
 \usepackage{setspace}
+\usepackage{graphicx}
+\graphicspath{ {./img/} }
 
 \author{Nima Seyedtalebi}
 \title{A Heuristic Solution to the Edge Computing Pipeline Placement Problem}
 
 \newcommand{\forallv}[1]{\ensuremath{\forall #1 \in V}}
 \newcommand{\foralle}[2]{\ensuremath{\forall (#1,#2) \in E }}
-\newcommand{\eppInstance}{\ensuremath{n,C,I[s],v_{out}}}
+\newcommand{\eppInstance}{\ensuremath{n,C,I[s]}}
 
 \begin{document}
 	\maketitle
@@ -22,6 +25,11 @@
 	\end{abstract}
 	
 	\section{Introduction}
+	
+	
+	TODO: Be sure to mention we assume the last stage's inputs also includes the output
+	
+	
 	The number of Internet protocol (IP) connected devices is growing rapidly. According to the Cisco Visual Networking Index, by 2022 the number of IP-connected devices will be more than three times the global population. 71 percent of these devices will be wireless or mobile, and as a whole they will produce 4.8 Zettabytes of data, compared to the 1.5 ZB in 2017.\cite{ciscoVNI} Compute capacity has grown to meet rising demands but network performance has not increased as quickly, leading to bottlenecks. The edge computing paradigm developed in response to this problem \cite{edgeEmerge},\cite{edgePromise}. The key idea of edge computing is that we can reduce the impact of network bottlenecks by moving computation closer to the input data.
 	
 	Cresco is a distributed edge computing framework developed by Bumgardner et al.\cite{bumgardner2016cresco} to address the network bottlenecks. Cresco's design is based on principles from agent-based systems and the actor programming model. Each node in a Cresco deployment is an intelligent agent that can act autonomously. Agents communicate by exchanging text-based messages and form the basis for Cresco's hierarchical control structure. Each agent may load plugins (user-defined modules) that run locally on the agent. These plugins are what perform the computations and represent the part of the framework supplied by users. They may be loaded and unloaded freely while the framework is running (i.e. they are "hot-swappable").
@@ -58,72 +66,119 @@
 	
 	We chose a complete graph to model a Cresco deployment because any agent may send messages to any other agent in a working deployment. The differing edge weights model different link characteristics found in practice. Cresco deployments can be global in scale and span many networks, so we account for these differences by using different weights.\footnote{Consider the pathological case where each node is in a network owned by a different group. In each case, we probably have a different firewall to go through} The weights could represent throughput, bandwidth, or latency depending on what is required by the application. The slow links represent data transmission through the existing control channels established by each agent while the faster links represent direct network connections. The "slow links" are "slow" because they require using Cresco's text-based messaging protocol, incurring additional overhead.
 	
-	Using this model, we can solve the EPP by solving the well-studied Steiner Tree problem. An instance of the Steiner Tree problem includes a graph $G = (V,E)$, a set of edge weights $w_{ij}$, and a set of terminals $T \subset V$ to be spanned. In the reduction from EEP to Steiner Tree, each terminal corresponds to either an assigned pipeline step, a node containing input data, or the output node. By finding a minimal Steiner tree, we find the shortest path that connects all pipeline stages with their input and the output and thus a minimal cost for a given placement. There is an unresolved issue: the Steiner Tree problem requires a set of terminals. In the EPP problem, we are given the locations of the input data and the output node but \textit{we do not know in advance where the pipe stages will be assigned}. Since we know each node's capacity and each stage's capacity requirements, we can enumerate all of the possible placements and find the minimum weight Steiner tree for each. A minimum-weight pipeline can then be defined by placing each stage so that the total cost is minimized.
+	Using this model, we can solve the EPP by solving the well-studied Steiner Tree problem. An instance of the Steiner Tree problem includes a graph $G = (V,E)$, a set of edge weights $w_{ij}$, and a set of terminals $T \subset V$ to be spanned. In the reduction from EEP to Steiner Tree, each terminal corresponds to either an assigned pipeline step, a node containing input data, or the output node. By finding a minimal Steiner tree, we find the shortest path that connects all pipeline stages with their input and the output and thus a minimal cost for a given placement. There is an unresolved issue: the Steiner Tree problem requires a set of terminals. In the EPP problem, we are given the locations of the input data and the output node but \textit{we do not know in advance where the pipe stages will be assigned}. Since we know each node's capacity and each stage's capacity requirements, we can enumerate all of the possible placements and find the minimum weight Steiner tree for each. A minimum-weight pipeline can then be defined by placing each stage so that the total cost is minimized. We will also consider the minimum spanning tree of the subgraph induced by the terminals for comparison.
 	
-	We know the input data locations in advance. For each stage after the first $s_{0}$, we also know that there will be a single input from the previous stage. Thus, we can completely determine how much each of the stages contributes to the weight of the whole pipeline in isolation. Moreover, for each pipe stage $s \ge 1$, there is \textit{some} placement of the previous stage that minimizes the total weight of that stage. Therefore, we can set a theoretical lower bound for all possible placements by finding the minimum possible weight for each stage and summing over all stages. Since our graph $G$ is complete, for each stage, any placement we make is at most one hop away from the optimum. Thus, we can find a lower bound for the cost of each stage by finding a locally-optimal placement and adding the weight of the "fastest" (smallest weight) edge incident to the node chosen for placement.
+	The Steiner tree problem is among the 21 NP-complete problems enumerated in Richard Karp's seminal paper \cite{Karp1972ReducibilityAC}. Thus, there is no known polynomial-time algorithm that solves the Steiner tree problem exactly. There are many approximation algorithms that find trees within some factor of the optimal. We will use the well-known technique described in \cite{Kou1981}. Given a weighted graph G and a set of terminals T:
+	\begin{enumerate}
+	    \item Find all-pairs shortest paths for G
+	    \item Construct a complete graph $H$ with the same nodes as $G$ and the weight of each edge $(u,v)$ set to the shortest path between $u$ and $v$ in $G$. $H$ is also called the metric closure of $G$
+	    \item Find the minimum spanning tree for the subgraph of $H$ induced by the terminals $T$
+	    \item Use the all-pairs shortest paths to transform the spanning tree in $H$ to a Steiner tree in $G$
+	\end{enumerate}
+	This algorithm produces approximations within a factor of $2(1 - \frac{1}{|T|})$ of the optimal solution.
 	
-	It is not clear whether the pipeline that results from this greedy algorithm is globally optimal or not. Since $G$ is complete, we can place an upper bound on the difference between our solution and the optimal one. Each placement is separated from the optimal by a single edge, so at worst our approximation is wrong by $n * max(W)$ where $W$ is the set of all edge weights and $n$ is the number of pipe stages. Our algorithm is described below.
+	Given an instance of the pipeline placement problem we have described, we know the input data locations and the output node in advance. For each stage after the first $s_{0}$, we also know that there will be a single input from the previous stage. Thus, we can completely determine how much each of the stages contributes to the weight of the whole pipeline in isolation. Moreover, for each pipe stage $s \ge 1$, there is \textit{some} placement of the previous stage that minimizes the total weight of that stage. Therefore, we can set a theoretical lower bound for all possible placements by finding the minimum possible weight for each stage and summing over all stages.
 	
-	\begin{algorithm}[H]
-		\caption{Pipeline placement algorithm}\label{EPP}
-		\begin{algorithmic}
-			%(n,C,I,O_{s},v_{out})
-			\Procedure{PlacePipeline}{$\eppInstance$}
-			\State s=0 \#step number
-			\State tc = 0 \#total cost
-			\State oc = 0 \#optimal cost
-			\State ComputeGs($G,C[s]$)
-			\State lastStage,bestweight = PlaceStage($G_{s},I[0],NULL$)
-			\State tc = tc + bestweight
-			\State s=s+1
-			\State oc = oc + bestweight
-			\While{There are more stages to place}
-			\State ComputeGs($G,C[s]$)
-			\State lastStage,bestweight = PlaceStage($G_{s},I[s],lastStage$)\\
-			\#Calculate optimum by considering only a single stage
-			\State lastStage,theoreticalOptimum = PlaceStage($G_{s},I[s],NULL$)
-			\State s=s+1
-			\State tc = tc + bestweight
-			\State oc = oc + theoreticalOptimum
-			\EndWhile
-			\State Find Steiner tree that spans last stage and output
-			\State tc = tc + cost to reach output node
-			\State oc = oc + weight of "lightest" edge incident to the output node
-			\EndProcedure
-		\end{algorithmic}
+	It is not clear whether the pipeline that results from this greedy algorithm is globally optimal or not. Since $G$ is complete, we can place an upper bound on the difference between our solution and the optimal one. Each placement is separated from the optimal by a single edge, so at worst our approximation is wrong by $n * max(W)$ where $W$ is the set of all edge weights and $n$ is the number of pipe stages. 
+
+	We devised the following two algorithms for placing pipeline stages using Steiner trees:
+	\begin{algorithm}
+	\caption{Iterative Placement}\label{alg_it}
+	\begin{algorithmic}[1]
+	    \Procedure{Place\_Stages\_Iteratively}{$spec,G$}
+	        \State H = metric closure of $G$
+	        \State rspec = spec in reverse order
+	        \State Create hashtable with node ids as keys and capacities as values
+	        \For{stage in rspec}
+	            \If{this is not the first stage}
+	                \State add last node placed to this stage's inputs
+	            \EndIf
+	            \State best\_placement = Place\_Stage(model,H,inputs,reqd\_capacity,capacities)
+	            \State capacities[node.id] = 0
+	            \State append best\_placement to list of placements
+	        \EndFor \\
+	        \Return reversed list of placements
+	    \EndProcedure
+	\end{algorithmic}
 	\end{algorithm}
-	\begin{algorithm}[H]
-		\caption{Place a single stage of the pipeline}
-		\begin{algorithmic}
-			\Procedure{PlaceStage}{$G_{s},I[s],i_{prev}$}
-			%\If{$i_{prev}$ is null}
-			\State bestnode = 0
-			\State bestweight = 0
-			\ForAll{$v \in G_s$}
-			 \State SteinerTree($G_s,I[s] \cup \{v\}$)
-			 \State update bestnode and bestweight
-			\EndFor \\
-			%\Else
-			%\State SteinerTree($G_s,I[s] \cup \{i_{prev}\}$)
-			%\EndIf
-			\Return{bestnode,bestweight}
-			\EndProcedure
-	    \end{algorithmic}
-    	\begin{algorithmic}
-    		\Procedure{ComputeGs}{$G,C$}
-    		\State $G_{s} = G$
-    		\ForAll{$v \in V$}
-    		\If{$\text{capacity of } v < C[s]$}
-    		\State Remove $v$ from $G_{s}$
-    		\EndIf
-    		\EndFor \\
-    		\Return{$G_s$}
-    		\EndProcedure
-    	\end{algorithmic}
+   
+   \begin{algorithm}
+	\caption{Individual Placement}\label{alg_ind}
+	\begin{algorithmic}[1]
+	    \Procedure{Place\_Stages\_Individually}{$spec,G$}
+	        \State H = metric closure of $G$
+	        \State rspec = spec in reverse order
+	        \State capacities = hashtable with node ids as keys and capacities as values
+	        \For{stage in rspec}
+	            \State best\_placement = Place\_Stage(model,H,inputs,reqd\_capacity,capacities)
+	            \State capacities[node.id] = 0
+	            \State append best\_placement to list of placements
+	        \EndFor
+	        \State Link individually placed stages by finding the minimum-weight Steiner tree linking the nodes selected for placements
+	        \\
+	        \Return revesrsed list of placements
+	    \EndProcedure
+	\end{algorithmic}
 	\end{algorithm}
 	
-	We expect this algorithm to run slowly in practice. The complexity depends on the method used to compute the minimum weight Steiner tree. In the worst case, this algorithm calls a function that calculates a Steiner tree $(s+1)(n-\frac{s}{2})+1$ times: once to link the pipeline to the output node and $n-p$ times for each stage, where $p$ represents the number of stages already placed. Still, this is much faster than solving for the whole pipeline at once by brute force. To solve for the whole pipeline by brute force, we would have to call a procedure SteinerTree ${|V| \choose s}$ times to find the weight of all possible placements. Since the nodes are not identical and we have capacity requirements for each pipe stage, we would also need to check that there is some way to assign each of the stages to the chosen set of nodes so that the capacity constraints are satisfied. There are $s!$ permutations of $s$ nodes, so in the worst case a brute-force approach requires $\mathcal{O}({|V| \choose s} + s!)$ operations. The gap between the approximate solution and the true optimum grows as the number of stages increases. Each additional stage adds the weight of the slowest link to the total possible error. 
- 
+	\begin{algorithm}
+	\caption{Place a single stage}\label{placestage}
+	\begin{algorithmic}[1]
+	    \Procedure{Place\_Stage}{model, H, inputs,reqd\_capacity,capacities}
+	    \Comment{H, the metric closure, is computed once for each problem instance}
+	        \For{node in model.nodes}
+	            \If{capacities[node.id] $\ge$ reqd\_capacity}
+	                \State Use model, H, and inputs to approximate minimum-weight Steiner tree
+	            \EndIf
+	        \EndFor \\
+	        \Return the best placement found 
+	    \EndProcedure
+	\end{algorithmic}
+	\end{algorithm}
+	
+	\section{Results}
+	%TODO: Actually put em in here and rework discussion
+	%make note of the fact that the different figures are not intended to be directly comparable
+    %The different simulations are not directly comparable to each other and are intended to highlight different things
+	To test our model and method, we carried out some simulations on synthetic networks. All of the simulations were run on the same desktop computer with a 4 GHz 8-core processor and 16 GB of RAM. The simulations were developed in Python using the NetworkX module \cite{Hagberg2008ExploringNS}.
+	Care must be taken when comparing the figures in this section because different parameters were used for different simulations. We chose parameter values to facilitate testing with limited time and resources and to minimize the effect of the things held constant. The tests are \textit{internally consistent} in that the same parameters are used to compare the different methods within the same simulation. This means that while we can safely compare data within the same test or simulation, we must be careful when making general comparisons across all of our simulations. Details regarding the design and setup of each simulation are included to help the reader interpret our data. Although our model and simulation code include checks for capacity, we set all node capacities and all capacity requirements to one (1) for all simulations except where specified. Capacity requirements only reduce the number of possible placements compared to to situations where capacity is unlimited. Since the algorithm exhaustively tries possible placements, removing capacity requirements allows the algorithm to try all of the placements possible for each input graph.
+	
+	\subsection{Algorithms Tested}
+	We tested algorithms \ref{alg_it} and \ref{alg_ind} using algorithm \ref{placestage} to place each stage. We also tried two variants of \ref{placestage} that use minimum spanning trees (MSTs) or a random choice instead of Steiner trees. For the MST case, we find the minimum spanning tree of the subgraph induced by the input nodes. For the random placer, we choose nodes randomly from the set of nodes with sufficient capacity.
+	
+	\subsection{Testing total Run times}
+	Our first experiments were designed to test how changes in input size affect total run time. First, we tried varying the size of the input graph while holding everything else constant. For these tests, we used a pipeline specification with only one stage and the same three input nodes. Note that the choice of \textit{which} nodes we use in our pipe spec are irrelevant for this test - all we care about it run time. All edge weights and node capacities were set to 1. The results are shown in figure \ref{fig:rt_gs}.
+	\begin{figure}[H]
+	    \centering
+	    \includegraphics[scale=0.8]{run_time_vs_graph_size}
+	    \caption{Run time versus graph size.}
+	    \label{fig:rt_gs}
+	\end{figure}
+	As expected, the Steiner tree-based methods were the slowest. The bulk of the time in these methods is spent on computing the metric closure, even though it is only computed once. NetworkX is open-source, so we can confirm this by inspecting the NetworkX source code and using what we already know about algorithms from \cite{Cormen09introductionto}. NetworkX uses repeated applications of Djikstra's algorithm to compute the metric closure, and since we know Djikstra's algorithm has a worst-case runtime of $O(V^{2})$, NetworkX's metric closure function runs in $O(V^{3})$ at worst. The shape of the graphs for the Steiner tree-based methods is consistent with a cubic function as expected from the theoretical analysis. The MST-based methods are clearly faster, but this is not surprising - NetworkX uses Kruskal's algorithm by default for finding MSTs, which has worst-case performance $O(E\ log(E))$.
+	
+	We also examined the effect of pipeline depth\footnote{That is, the number of stages in the pipeline} on total run times. For this simulation, we set all weights and capacities to 1 as before. We fixed the graph size to 64 nodes and used randomly-generated pipe specifications with a single input node per stage. Again, since the algorithm searches the problem space exhaustively and we are only interested in run time, the choice of inputs for each stage is arbitrary as long as the \textit{number} of inputs remains the same. These results are summarized in figure \ref{fig:pd_gs}
+	\begin{figure}[H]
+	    \centering
+	    \includegraphics[scale=0.8]{run_time_vs_pipe_depth.png}
+	    \caption{Run time versus pipeline depth (number of stages)}
+	    \label{fig:pd_gs}
+	\end{figure}
+	There are a few clear patterns in this graph. Firstly, we can see that the slope of the run times is nearly zero when the pipe depth is nearly the same size as the input graph. This is due to the fact that each stage we place removes that stage from further consideration, effectively reducing the input size by one as each stage stage is placed. If we held everything else constant and ran the experiment again with a larger graph, we would expect each line to retain a gentle, almost-linear\footnote{Not linear because we expect each stage after the first to take proportionally a little less time since the input size decreases by one each time} slope until the depth of the pipeline gets close to the total input size again.
+	We can also see that the iterative algorithms are slower in every case. The effect of adding a new terminal to each tree appears to outweigh the effect of removing a node from consideration each iteration. This makes sense intuitively: the "penalty" for the extra input node is incurred for every iteration while the "savings" we get by removing already-placed nodes from consideration is only incurred once. Finally, we can see that both Steiner tree-based methods are slower.
+	
+	\subsection{Testing Performance}
+	We also compared the performance of the different algorithms proposed. For all of these tests, we used total pipeline cost as our metric. This total is sum of all edge weights in the pipeline including all the inputs, placements, and output. For each of the performance tests, we used randomly-generated graphs and randomly-generated pipe specifications. For each of these tests, we used a graph size of 32 and averaged our results over 40 different randomly-generated input graphs and pipe specifications.
+	
+	We examined performance for different percentages of "fast" edges in the random model. Recall that in our model of a Cresco deployment, we have "slow" edges and (significantly faster) "fast" edges. For this test, we assigned fast edges a weight of 1 and slow edges a weight of 10. As before, all capacities and capacity requirements were set to 1. We were particularly interested in comparing the MST and Steiner tree-based algorithms. We know the Steiner versions are slower, so we were curious if there is some density of fast edges where the MST and Steiner-based version offer comparable performance. We expected to see a bigger difference in performance between the two when the fast edges are relatively sparse because the Steiner tree-based algorithms consider more paths than MST-based ones. Steiner trees can contain "non-terminal" nodes (in our model, inputs or the output) whereas the minimum spanning tree of a subgraph includes only nodes in that subgraph.  In other words, the Steiner tree-based methods will route traffic through nodes connected to fast edges while the MST-based ones will only choose direct links between the terminals. The results of this experiment are summarized in figure \ref{fig:perf_fe}.
+	
+	\begin{figure}
+	    \centering
+	    \includegraphics[scale=0.8]{pipe_cost_vs_fast_edge_pct.png}
+	    \caption{Total pipeline cost versus percentage of fast edges.}
+	    \label{fig:perf_fe}
+	\end{figure}
+	
+	%TODO:Insert and discuss other figures
  	\section{Discussion}
  	We initially set out to create an ILP formulation for the EPP problem. Our problem is essentially a classic Steiner Tree problem with extra constraints, so we hoped to find an ILP formulation that could be used to solve for an entire pipeline at once. This approach has been fruitful in the past with variants of the Steiner Tree Problem such as the Prize-Collecting Steiner Tree problem. So far we have been unsuccessful in our efforts.  We examined a selection of papers (\cite{Aneja1980AnIL}, \cite{Goemans1993ACO},\cite{Koch1998SolvingST}, \cite{Ljubic2005SolvingTP}, \cite{brandstater15}, and \cite{haouari2010strength}) from the vast literature regarding ILP formulations of the Steiner Tree problem but could not find any formulations that do not require knowing the terminal nodes in advance. Given the sheer volume of publications regarding the Steiner Tree problem and ILP formulations thereof, we suspect such a formulation has already been described.
  	
