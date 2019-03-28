@@ -44,6 +44,39 @@ def run_fast_edge_tests():
     with open('performance_fast_edge_pct.pickled','wb') as pickleout:
         pickle.dump(results_for_pct,pickleout)
 
+def run_capacity_effect_test():
+    graph_size = 32
+    capacity_pcts = [pct*0.01 for pct in range(2,100,2)]
+    iterations = 40
+
+    results_for_pct = {}
+    for capacity_pct in capacity_pcts:
+        results = {'random':[],
+                    'individual_steiner':[],
+                    'iterative_steiner':[],
+                    'individual_mst':[],
+                    'iterative_mst':[],
+                    'est_lower_bound':[]
+                }
+        for iteration in range(0,iterations):
+            print(f'{capacity_pct*100} % nodes with sufficent capacity, iteration {iteration}')
+            model_params = placer.get_default_model_params(graph_size,0.50)
+            model,weights,capacities = placer.get_model(**model_params)
+            picked = sample((node for node in model.nodes),
+            spec = placer.get_random_pipe_spec(model.nodes,8,#depth
+                                                     3,#num inputs per stage
+                                                     1)#reqd capacity per stage
+            to_run = placer.prepare_functions(spec,model)
+            for name,func in to_run.items():
+                placements,tree = func()
+                if name == 'individual_steiner':
+                    composed = nx.compose_all((p.tree for p in placements))
+                    results['est_lower_bound'] += [placer.total_weight(composed)]
+                results[name].append(placer.total_weight(tree))
+        results_for_pct[capacity_pct] = results
+    with open('performance_capacity_pct.pickled','wb') as pickleout:
+        pickle.dump(results_for_pct,pickleout)
+
 def run_pipe_depth_tests():
     graph_size = 32
     iterations = 40
