@@ -84,7 +84,23 @@ ax.set_yticks([i for i in range(0,300,25)])
 ax.grid()
 ax.legend()
 plt.show()
-#************************Performance,pipe depth******************************
+#************************Performance,capacity **********************************
+with open('performance_capacity_pct.pickled','rb') as picklein:
+    results_for_pct = pickle.load(picklein)
+x_values = [pct for pct in results_for_pct.keys()]
+fig,ax = plt.subplots()
+for method in method_names:
+	y_values = [mean(res[method]) for pct,res in results_for_pct.items()]
+	print(method)
+	for point in zip(x_values,y_values):
+		print(point)
+	ax.plot(x_values,
+		y_values,
+		label=method)
+ax.grid()
+ax.legend()
+plt.show()
+#************************Performance,pipe depth*********************************
 with open('performance_pipe_depth.pickled','rb') as picklein:
     results_for_depth = pickle.load(picklein)
 x_values = [depth for depth in results_for_depth.keys()]

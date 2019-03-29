@@ -3,7 +3,7 @@ import pickle
 import argparse
 from statistics import mean
 from random import sample
-from math import fsum
+from math import fsum,floor
 
 import networkx as nx
 
@@ -60,12 +60,17 @@ def run_capacity_effect_test():
                 }
         for iteration in range(0,iterations):
             print(f'{capacity_pct*100} % nodes with sufficent capacity, iteration {iteration}')
-            model_params = placer.get_default_model_params(graph_size,0.50)
+            model_params = placer.get_default_model_params(graph_size,0.05)
             model,weights,capacities = placer.get_model(**model_params)
-            picked = sample((node for node in model.nodes),
+            picked = sample(tuple((node for node in model.nodes)),
+                            floor(capacity_pct*len(model.nodes)))
+            for node,data in model.nodes.data():
+                if node in picked:
+                    data['capacity'] = 2
+
             spec = placer.get_random_pipe_spec(model.nodes,8,#depth
                                                      3,#num inputs per stage
-                                                     1)#reqd capacity per stage
+                                                     2)#reqd capacity per stage
             to_run = placer.prepare_functions(spec,model)
             for name,func in to_run.items():
                 placements,tree = func()
@@ -152,3 +157,5 @@ if __name__ == '__main__':
         run_pipe_depth_tests()
     if args.test == 'fast-edges':
         run_fast_edge_tests()
+    if args.test == 'capacity':
+        run_capacity_effect_test()
