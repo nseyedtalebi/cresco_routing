@@ -97,6 +97,12 @@ for method in method_names:
 	ax.plot(x_values,
 		y_values,
 		label=method)
+ax.set_xlabel('Fraction of nodes with sufficient capacity (# nodes with capacity / # nodes)')
+ax.set_ylabel('Total Pipeline Cost')
+ax.set_title('Total Pipeline Cost versus Fraction of Nodes with Sufficient Capacity')
+ax.set_xlim(0,1)
+ax.set_xticks([0.02]+[i*0.01 for i in range(10,100,10)])
+ax.set_yticks([i for i in range(0,300,25)])
 ax.grid()
 ax.legend()
 plt.show()
