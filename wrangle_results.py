@@ -124,7 +124,29 @@ ax.set_ylabel('Total Pipeline Cost')
 ax.set_title('Total Pipeline Cost versus Pipe Depth')
 ax.set_xlim(1,20)
 ax.set_xticks([1]+[i for i in range(2,22,2)])
-ax.set_yticks([i for i in range(0,300,25)])
+ax.set_yticks([i for i in range(0,700,50)])
+ax.grid()
+ax.legend()
+plt.show()
+#*******************Performance, inputs per stage**************************
+with open('performance_inputs_per_stage.pickled','rb') as pickleout:
+        inputs_per_stage = pickle.load(pickleout)
+x_values = [depth for depth in inputs_per_stage.keys()]
+fig,ax = plt.subplots()
+for method in method_names:
+	y_values = [mean(res[method]) for depth,res in inputs_per_stage.items()]
+	print(method)
+	for point in zip(x_values,y_values):
+		print(point)
+	ax.plot(x_values,
+		y_values,
+		label=method)
+ax.set_xlabel('# Input Nodes per Stage')
+ax.set_ylabel('Total Pipeline Cost')
+ax.set_title('Total Pipeline Cost versus # Input Nodes per Stage')
+ax.set_xlim(1,10)
+#ax.set_xticks([1]+[i for i in range(2,22,2)])
+ax.set_yticks([i for i in range(0,700,50)])
 ax.grid()
 ax.legend()
 plt.show()

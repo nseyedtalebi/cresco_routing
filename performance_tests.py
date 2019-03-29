@@ -82,8 +82,40 @@ def run_capacity_effect_test():
     with open('performance_capacity_pct.pickled','wb') as pickleout:
         pickle.dump(results_for_pct,pickleout)
 
+def run_inputs_per_stage_tests():
+    graph_size = 96
+    inputs_per_stage = [i for i in range(1,11)]
+    iterations = 40
+
+    results_for_pct = {}
+    for num_inputs in inputs_per_stage:
+        results = {'random':[],
+                    'individual_steiner':[],
+                    'iterative_steiner':[],
+                    'individual_mst':[],
+                    'iterative_mst':[],
+                    'est_lower_bound':[]
+                }
+        for iteration in range(0,iterations):
+            print(f'{num_inputs} inputs per stage, iteration {iteration}')
+            model_params = placer.get_default_model_params(graph_size,0.05)
+            model,weights,capacities = placer.get_model(**model_params)
+            spec = placer.get_random_pipe_spec(model.nodes,8,#depth
+                                                     num_inputs,#num inputs per stage
+                                                     1)#reqd capacity per stage
+            to_run = placer.prepare_functions(spec,model)
+            for name,func in to_run.items():
+                placements,tree = func()
+                if name == 'individual_steiner':
+                    composed = nx.compose_all((p.tree for p in placements))
+                    results['est_lower_bound'] += [placer.total_weight(composed)]
+                results[name].append(placer.total_weight(tree))
+        results_for_pct[num_inputs] = results
+    with open('performance_inputs_per_stage.pickled','wb') as pickleout:
+        pickle.dump(results_for_pct,pickleout)
+
 def run_pipe_depth_tests():
-    graph_size = 32
+    graph_size = 64
     iterations = 40
     results_for_depth = {}
     for depth in range(1,20):
@@ -101,7 +133,7 @@ def run_pipe_depth_tests():
             model_params = placer.get_default_model_params(graph_size,0.05)
             model,weights,capacities = placer.get_model(**model_params)
             spec = placer.get_random_pipe_spec(model.nodes,depth,#depth
-                                                     1,#num inputs per stage
+                                                     3,#num inputs per stage
                                                      1)#reqd capacity per stage
             to_run = placer.prepare_functions(spec,model)
             for name,func in to_run.items():
@@ -159,3 +191,5 @@ if __name__ == '__main__':
         run_fast_edge_tests()
     if args.test == 'capacity':
         run_capacity_effect_test()
+    if args.test == 'inputs-per':
+        run_inputs_per_stage_tests()
