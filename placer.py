@@ -94,10 +94,8 @@ def place_stages(spec,model,algorithm,iterative=True):
         if algorithm not in ('steiner','mst'):
             raise ValueError('Algorithm must be one of (steiner,mst)')
         placements.append(best_placement)
-        #Make sure this node isn't reused
-        #In future versions, could reduce capacity by cost and allow multiple placements
-        #on a single node
-        capacities[best_placement.node] = 0
+        #reduce capacity by amount required
+        capacities[best_placement.node] -= stage['reqd_capacity']
     trees = [p.tree for p in placements]
     if not iterative:#tie the placed nodes together
         if algorithm == 'steiner':

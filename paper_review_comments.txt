@@ -1,0 +1,23 @@
+Several drawbacks are listed as follows. 
+1. The introduction and literature review should be improved. More state-of-the-art work about service placement should be reviewed, and the contribution of this work needs to be specified. The motivation of modeling the computation task as a pipeline should be clarified, with examples of edge computing applications that support this model. 
+2. Some assumptions of the model are not reasonable, and lack illustrations: 
+	a.It is not clear why each node can have at most one stage assigned? Why multiple stages cannot be carried out on a single node if the capacity requirement is satisfied, so that the data movement cost is further reduced? 
+	b.What are the input and output nodes? 
+	c.What are slow and fast links? What is their relations with the weights of the edges? And how to decide the ratio of slow and fast links. 
+3. The problem can be formulated in a mathematical way that clarifies the objective, constraints and optimization variables, to make it easier to understand. 
+4. More details of the theoretical lower bound of the proposed algorithms should be introduced, e.g., what is the complexity, and is it achievable? And the worst-case analysis is very heuristic, and does not provide any contribution. 
+5. Some details about the proposed algorithms are missing. What are Djikstra’s algorithm and Kruskal’s algorithm, and their pros and cons? What is NetworkX? Is it necessary to propose two placement algorithms? What is the main difference between them? And why do they have the same asymptotic behavior? 6. Most simulation results are obtained from a very simple setting. Maybe the Gaussian distribution used in figure 12, or other distributions should also be used for other figures. And it would be more convincing if the run time is tested in a more complicated scenario, rather than a homogeneous setting. 7. Please check the formats of the references, including the vol., no., pp., month and year. And all the left quotation marks are not in the correct form.
+
+Some issues encountered in the paper: 
+	- In the model the authors assume that every node may perform only one stage. Is it a realistic assumption? 
+	- The term 'link' should be better explained, since it is misleading. 
+	- Computational tasks should be better defined. Is not clear to me if one task is equal to one stage. - editing: check the punctuation at the end of section II.
+
+I enjoyed reading the paper and I believe it is a nice fit for the present workshop. There are however two aspects that I would clarify better: 
+	- the first concerns the model for the computation jobs, the author(s) should better describe how a computation job is modeled, whether it is monolithic or could be split into several (parallel, sequential?) stages and so forth. This additional description should be added at the beginning of Section III. Probably it would be even better to create an additional mini-section before Section III to introduce the job processing model 
+	- the second concern is about the allocation of computation resources vs time. From the paper it is not clear whether the author(s) deal with a scenario where a number of jobs arrive at time 0 and these have to be optimally allocated within the edge computing network (using one of the presented algorithms) or if jobs arrive continuously and, in turn, the allocation has to be continuously refined. This second case would be more challenging and interesting as it also implies dealing with jobs that are backlogged and/or for which the computation is not finalized, etc. 
+
+	I warmly recommend adding some explanatory text about this aspect as well minor edits 
+		- second column of page 1: initiates a discovery "the" process -> remove "the" 
+		- first column of page 5: all capacity requirements to one (1) -> here (1) is confusing as it may be interpreted as cross-reference for an equation. I would suggest to just use "to one" without "(1)" 
+		- second column of page 5: all we care about "it" run time -> "is"
