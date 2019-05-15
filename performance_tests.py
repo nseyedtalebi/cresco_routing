@@ -3,7 +3,7 @@ import pickle
 import argparse
 from statistics import mean
 from random import sample
-from math import fsum,floor
+from math import fsum,floor,log
 
 import networkx as nx
 
@@ -11,6 +11,7 @@ import placer
 
 placer.seed(1988)#Does this even matter?
 
+pareto_alpha = log(0.05) / log(0.1)
 def run_fast_edge_tests():
     graph_size = 32
     #fast_edge_pcts = [pct*0.01 for pct in range(5,100,5)]
@@ -60,8 +61,8 @@ def run_capacity_effect_test():
                 }
         for iteration in range(0,iterations):
             print(f'{capacity_pct*100} % nodes with sufficent capacity, iteration {iteration}')
-            model_params = placer.get_default_model_params(graph_size,0.05)
-            model,weights,capacities = placer.get_model(**model_params)
+            #model_params = placer.get_default_model_params(graph_size,0.05)
+            model,weights,capacities  = placer.get_randomized_model_pareto(graph_size,pareto_alpha)
             picked = sample(tuple((node for node in model.nodes)),
                             floor(capacity_pct*len(model.nodes)))
             for node,data in model.nodes.data():
@@ -98,8 +99,8 @@ def run_inputs_per_stage_tests():
                 }
         for iteration in range(0,iterations):
             print(f'{num_inputs} inputs per stage, iteration {iteration}')
-            model_params = placer.get_default_model_params(graph_size,0.05)
-            model,weights,capacities = placer.get_model(**model_params)
+            #model_params = placer.get_default_model_params(graph_size,0.05)
+            model,weights,capacities = placer.get_randomized_model_pareto(graph_size,pareto_alpha)
             spec = placer.get_random_pipe_spec(model.nodes,8,#depth
                                                      num_inputs,#num inputs per stage
                                                      1)#reqd capacity per stage
@@ -130,8 +131,8 @@ def run_pipe_depth_tests():
             print(f'{depth} pipe depth, iteration {iteration}')
             #choose fast edge pct based on point of max separation between
             #steiner and mst methods
-            model_params = placer.get_default_model_params(graph_size,0.05)
-            model,weights,capacities = placer.get_model(**model_params)
+            #model_params = placer.get_default_model_params(graph_size,0.05)
+            model,weights,capacities = placer.get_randomized_model_pareto(graph_size,pareto_alpha)
             spec = placer.get_random_pipe_spec(model.nodes,depth,#depth
                                                      3,#num inputs per stage
                                                      1)#reqd capacity per stage
@@ -147,7 +148,7 @@ def run_pipe_depth_tests():
     with open('performance_pipe_depth.pickled','wb') as pickleout:
         pickle.dump(results_for_depth,pickleout)
 
-def run_randomized_model_tests():
+def run_randomized_model_tests_gaussian():
     graph_size = 32
     iterations = 40
     pipe_depth = 8
@@ -162,7 +163,7 @@ def run_randomized_model_tests():
                 }
         for iteration in range(0,iterations):
             print(f'Sigma:{sigma}, iteration {iteration}')       
-            model = placer.get_randomized_model(graph_size,10,sigma)
+            model,weights,capacities = placer.get_randomized_model_gaussian(graph_size,10,sigma)
             spec = placer.get_random_pipe_spec(model.nodes,pipe_depth,#depth
                                                      3,#num inputs per stage
                                                      1)#reqd capacity per stage
@@ -179,17 +180,51 @@ def run_randomized_model_tests():
     with open('performance_randomized_sigma.pickled','wb') as pickleout:
         pickle.dump(results_for_sigma,pickleout)
 
+def run_randomized_model_tests_pareto():
+    graph_size = 32
+    iterations = 40
+    pipe_depth = 8
+    results_for_alpha = {}
+    for alpha in (log(1-i*0.1) for i in range(2,100,2)):
+        results = {'random':[],
+                    'individual_steiner':[],
+                    'iterative_steiner':[],
+                    'individual_mst':[],
+                    'iterative_mst':[],
+                    'est_lower_bound':[]
+                }
+        for iteration in range(0,iterations):
+            print(f'alpha:{alpha}, iteration {iteration}')       
+            model,weights,capacities = placer.get_randomized_model(graph_size,10,sigma)
+            spec = placer.get_random_pipe_spec(model.nodes,pipe_depth,#depth
+                                                     3,#num inputs per stage
+                                                     1)#reqd capacity per stage
+            to_run = placer.prepare_functions(spec,model)
+            for name,func in to_run.items():
+                placements,tree = func()
+                results[name].append(placer.total_weight(tree))
+                if name == 'individual_steiner':
+                    composed = nx.compose_all((p.tree for p in placements))
+                    results['est_lower_bound'] += [placer.total_weight(composed)]
+        results_for_alpha[sigma] = results
+
+    print(results_for_alpha)
+    with open('performance_randomized_pareto.pickled','wb') as pickleout:
+        pickle.dump(results_for_alpha,pickleout)
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("Run tests to get simulation results for placer.py")
     parser.add_argument('test',help='The name of the test to run. One of either "randomized", "pipe-depth" or "fast-edges"')
     args = parser.parse_args()
-    if args.test == 'randomized':
-        run_randomized_model_tests()
-    if args.test == 'pipe-depth':
+    if args.test == 'gaussian' or args.test == 'all':
+        run_randomized_model_tests_gaussian()
+    if args.test == 'pareto' or args.test == 'all':
+        run_randomized_model_tests_pareto()
+    if args.test == 'pipe-depth' or args.test == 'all':
         run_pipe_depth_tests()
-    if args.test == 'fast-edges':
+    if args.test == 'fast-edges' or args.test == 'all':
         run_fast_edge_tests()
-    if args.test == 'capacity':
+    if args.test == 'capacity' or args.test == 'all':
         run_capacity_effect_test()
-    if args.test == 'inputs-per':
+    if args.test == 'inputs-per' or args.test == 'all':
         run_inputs_per_stage_tests()

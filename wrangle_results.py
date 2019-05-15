@@ -1,7 +1,6 @@
 import pickle
 from statistics import mean
 
-import numpy as np
 import matplotlib.pyplot as plt
 
 import placer
@@ -9,7 +8,7 @@ import placer
 #We don't actually want the functions, just the names
 method_names = [name for name in placer.prepare_functions(None,None).keys()]
 #*************************Graph Size********************************************
-with open('graph_size_runtimes.pickled','rb') as pickled:
+'''with open('graph_size_runtimes.pickled','rb') as pickled:
     runtimes = pickle.load(pickled)
 #print(runtimes)
 #runtimes[graph_size][method]
@@ -34,6 +33,7 @@ ax.set_yticklabels([f'{i*0.01:.3}' for i in range(0,110,10)])
 ax.grid()
 ax.legend()
 plt.show()
+
 #*******************************Pipe Depth**************************************
 with open('pipe_depth_runtimes.pickled','rb') as pickled:
         depth_runtimes = pickle.load(pickled)
@@ -60,8 +60,10 @@ ax.set_yticklabels([f'{i*0.01:.3}' for i in range(0,110,10)])
 ax.grid()
 ax.legend()
 plt.show()
+'''
 #*******************************************************************************
 method_names += ['est_lower_bound']
+
 #************************Performance,fast edge pct******************************
 with open('performance_fast_edge_pct.pickled','rb') as picklein:
     results_for_pct = pickle.load(picklein)
@@ -84,6 +86,7 @@ ax.set_yticks([i for i in range(0,300,25)])
 ax.grid()
 ax.legend()
 plt.show()
+'''
 #************************Performance,capacity **********************************
 with open('performance_capacity_pct.pickled','rb') as picklein:
     results_for_pct = pickle.load(picklein)
@@ -102,7 +105,7 @@ ax.set_ylabel('Total Pipeline Cost')
 ax.set_title('Total Pipeline Cost versus Fraction of Nodes with Sufficient Capacity')
 ax.set_xlim(0,1)
 ax.set_xticks([0.02]+[i*0.01 for i in range(10,100,10)])
-ax.set_yticks([i for i in range(0,300,25)])
+ax.set_yticks([i for i in range(25,45,5)])
 ax.grid()
 ax.legend()
 plt.show()
@@ -173,3 +176,4 @@ ax.set_yticks([i for i in range(50,250,25)])
 ax.grid()
 ax.legend()
 plt.show()
+'''

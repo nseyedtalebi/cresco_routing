@@ -1,17 +1,18 @@
 import functools
-from dataclasses import dataclass
+import pdb
 import typing
+from dataclasses import dataclass
+from random import sample,randint,seed,uniform,paretovariate,gauss
+from collections import namedtuple,Sequence
+from itertools import chain,product,filterfalse
+from math import floor
+
+
+import networkx as nx
 from networkx.algorithms.approximation.steinertree import metric_closure
 from networkx.algorithms.tree.mst import minimum_spanning_tree
 from networkx.algorithms.operators.all import compose_all
 from networkx.utils import pairwise
-from random import sample,randint,seed,uniform
-from collections import namedtuple,Sequence
-from itertools import chain,product,filterfalse
-from math import floor
-import pdb
-import networkx as nx
-import numpy as np
 
 PlacementRecord = namedtuple('PlacementRecord',('node','weight','tree',))
 
@@ -37,6 +38,9 @@ def total_weight(graph):
 def get_capacity_dict(g):
     return {node:d['capacity'] for node,d in dict(g.nodes.data()).items()}
 
+def get_weights_dict(g):
+    return {(u,v):d['weight'] for u,v,d in g.edges.data()}
+
 def get_model(g,slow_edge,fast_edge,fast_edges,capacities):
     fast_edges += tuple(tuple(reversed(edge)) for edge in fast_edges)
     for edge in g.edges:
@@ -46,12 +50,7 @@ def get_model(g,slow_edge,fast_edge,fast_edges,capacities):
             g.add_edge(*edge,weight=slow_edge)
     for node in g.nodes:
         g.nodes[node]['capacity']=capacities[node]
-        #randint(ccap_low,ccap_hi)
-    weights = {}
-    for i in range(len(g)):
-        for j in range(len(g)):
-            if i!=j:
-                weights[i,j] = g.get_edge_data(i,j)['weight']
+    weights = get_weights_dict(g)
     capacities = get_capacity_dict(g)
     return g,weights,capacities
 
@@ -67,7 +66,7 @@ def place_stages_randomly(spec,model):
             total_weight(tree),
             tree)
         placements.append(best_placement)
-        capacities[best_placement.node] = 0
+        capacities[best_placement.node] -= stage['reqd_capacity']
     trees = [p.tree for p in placements]
     return list(reversed(placements)),compose_all(trees)
 
@@ -150,14 +149,23 @@ def get_default_model_params(graph_size,fast_edge_pct):
     model_params['capacities'] = {node:1 for node in g.nodes}
     return model_params
 
-def get_randomized_model(graph_size,weights_mu,weights_sigma):
+def get_randomized_model_gaussian(graph_size,weights_mu,weights_sigma):
     g = nx.complete_graph(n=graph_size)
     for node,data in g.nodes.data():
         data['capacity'] = 1
     for u,v,data in g.edges.data():
-        normal = np.random.normal(weights_mu,weights_sigma)
+        normal = gauss(weights_mu,weights_sigma)
         data['weight'] = normal if normal > 1 else 1
-    return g
+    return g,get_weights_dict(g),get_capacity_dict(g)
+
+def get_randomized_model_pareto(graph_size,alpha):
+    g = nx.complete_graph(n=graph_size)
+    for node,data in g.nodes.data():
+        data['capacity'] = 1
+    for u,v,data in g.edges.data():
+        pareto = paretovariate(alpha)
+        data['weight'] = pareto
+    return g,get_weights_dict(g),get_capacity_dict(g)
 
 def prepare_functions(spec,model):
     return {'random':functools.partial(place_stages_randomly,spec,model),
