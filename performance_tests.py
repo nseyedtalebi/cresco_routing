@@ -9,9 +9,10 @@ import networkx as nx
 
 import placer
 
-placer.seed(1988)#Does this even matter?
+placer.seed(1988)
 
-pareto_alpha = log(0.05) / log(0.1)
+pareto_alpha = 4.33
+
 def run_fast_edge_tests():
     graph_size = 32
     #fast_edge_pcts = [pct*0.01 for pct in range(5,100,5)]
@@ -185,7 +186,7 @@ def run_randomized_model_tests_pareto():
     iterations = 40
     pipe_depth = 8
     results_for_alpha = {}
-    for alpha in (log(1-i*0.1) for i in range(2,100,2)):
+    for alpha in [i*0.1 for i in range(5,50,5)]:
         results = {'random':[],
                     'individual_steiner':[],
                     'iterative_steiner':[],
@@ -195,7 +196,7 @@ def run_randomized_model_tests_pareto():
                 }
         for iteration in range(0,iterations):
             print(f'alpha:{alpha}, iteration {iteration}')       
-            model,weights,capacities = placer.get_randomized_model(graph_size,10,sigma)
+            model,weights,capacities = placer.get_randomized_model_pareto(graph_size,alpha)
             spec = placer.get_random_pipe_spec(model.nodes,pipe_depth,#depth
                                                      3,#num inputs per stage
                                                      1)#reqd capacity per stage
@@ -206,7 +207,7 @@ def run_randomized_model_tests_pareto():
                 if name == 'individual_steiner':
                     composed = nx.compose_all((p.tree for p in placements))
                     results['est_lower_bound'] += [placer.total_weight(composed)]
-        results_for_alpha[sigma] = results
+        results_for_alpha[alpha] = results
 
     print(results_for_alpha)
     with open('performance_randomized_pareto.pickled','wb') as pickleout:

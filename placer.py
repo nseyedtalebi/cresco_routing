@@ -2,7 +2,7 @@ import functools
 import pdb
 import typing
 from dataclasses import dataclass
-from random import sample,randint,seed,uniform,paretovariate,gauss
+from random import sample,randint,seed,uniform,paretovariate,gauss,random
 from collections import namedtuple,Sequence
 from itertools import chain,product,filterfalse
 from math import floor
@@ -31,6 +31,12 @@ def get_placements(model,terminals,capacities,required_capacity,
             placements.append(PlacementRecord(v, cur_weight, tree))
     ranked = sorted(placements,key=lambda p:p.weight)
     return ranked
+
+def bounded_pareto(lo,hi,alpha):
+    rnd = random()
+    H = hi**alpha
+    L = lo**alpha
+    return (-(rnd*H - rnd*L - H)/(H*L))**(-1/alpha)
 
 def total_weight(graph):
     return sum((graph.edges[edge]['weight'] for edge in graph.edges))
@@ -61,13 +67,15 @@ def place_stages_randomly(spec,model):
         possible_placements = [node for node in model.nodes\
          if capacities[node] >= stage['reqd_capacity']]
         selected_node = sample(possible_placements,1)[0]
-        tree = minimum_spanning_tree(model.subgraph(stage['input_nodes']+(selected_node,)))
+        terminals = list(set(stage['input_nodes'])|set([selected_node]))
+        tree = minimum_spanning_tree(model.subgraph(terminals))
         best_placement = PlacementRecord(selected_node,
             total_weight(tree),
             tree)
         placements.append(best_placement)
         capacities[best_placement.node] -= stage['reqd_capacity']
     trees = [p.tree for p in placements]
+    trees += [minimum_spanning_tree(model.subgraph([p.node for p in placements]))]
     return list(reversed(placements)),compose_all(trees)
 
 def place_stages(spec,model,algorithm,iterative=True):
@@ -163,8 +171,8 @@ def get_randomized_model_pareto(graph_size,alpha):
     for node,data in g.nodes.data():
         data['capacity'] = 1
     for u,v,data in g.edges.data():
-        pareto = paretovariate(alpha)
-        data['weight'] = pareto
+        pareto = bounded_pareto(1,10,alpha)
+        data['weight'] = 10 - pareto
     return g,get_weights_dict(g),get_capacity_dict(g)
 
 def prepare_functions(spec,model):

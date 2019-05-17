@@ -86,7 +86,6 @@ ax.set_yticks([i for i in range(0,300,25)])
 ax.grid()
 ax.legend()
 plt.show()
-'''
 #************************Performance,capacity **********************************
 with open('performance_capacity_pct.pickled','rb') as picklein:
     results_for_pct = pickle.load(picklein)
@@ -109,6 +108,7 @@ ax.set_yticks([i for i in range(25,45,5)])
 ax.grid()
 ax.legend()
 plt.show()
+
 #************************Performance,pipe depth*********************************
 with open('performance_pipe_depth.pickled','rb') as picklein:
     results_for_depth = pickle.load(picklein)
@@ -131,6 +131,7 @@ ax.set_yticks([i for i in range(0,700,50)])
 ax.grid()
 ax.legend()
 plt.show()
+
 #*******************Performance, inputs per stage**************************
 with open('performance_inputs_per_stage.pickled','rb') as pickleout:
         inputs_per_stage = pickle.load(pickleout)
@@ -153,8 +154,8 @@ ax.set_yticks([i for i in range(0,700,50)])
 ax.grid()
 ax.legend()
 plt.show()
-#*******************Performance,sigma**************************************
 
+#*******************Performance,sigma**************************************
 with open('performance_randomized_sigma.pickled','rb') as picklein:
     results_for_sigma = pickle.load(picklein)
 x_values = [sigma for sigma in results_for_sigma.keys()]
@@ -176,4 +177,26 @@ ax.set_yticks([i for i in range(50,250,25)])
 ax.grid()
 ax.legend()
 plt.show()
-'''
+
+#**************Performance,pareto**********************************************
+with open('performance_randomized_pareto.pickled','rb') as picklein:
+    results_for_sigma = pickle.load(picklein)
+x_values = [sigma for sigma in results_for_sigma.keys()]
+fig,ax = plt.subplots()
+for method in method_names:
+	y_values = [mean(res[method]) for sigma,res in results_for_sigma.items()]
+	print(method)
+	for point in zip(x_values,y_values):
+		print(point)
+	ax.plot(x_values,
+		y_values,
+		label=method)
+ax.set_xlabel('Alpha')
+ax.set_ylabel('Total Pipeline Cost')
+ax.set_title('Total Pipeline Cost versus Alpha')
+ax.set_xlim(1,5)
+ax.set_xticks([i*0.1 for i in range(10,50,5)])
+ax.set_yticks([i for i in range(50,250,25)])
+ax.grid()
+ax.legend()
+plt.show()
